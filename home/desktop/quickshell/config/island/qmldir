@@ -1,0 +1,11 @@
+singleton IslandState IslandState.qml
+singleton SysStats SysStats.qml
+Island Island.qml
+IslandService IslandService.qml
+IslandSideButton IslandSideButton.qml
+IslandMusicView IslandMusicView.qml
+IslandNotifView IslandNotifView.qml
+IslandNetworkView IslandNetworkView.qml
+IslandSysmonView IslandSysmonView.qml
+IslandCalendarView IslandCalendarView.qml
+IslandSparkline IslandSparkline.qml
