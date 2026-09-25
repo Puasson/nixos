@@ -2,18 +2,13 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// Estado compartido de la isla dinámica (una sola instancia global).
 QtObject {
     id: root
 
-    // Expandido manual por clic / IPC.
     property bool manualExpanded: false
 
-    // Vista del panel extendido: music | notif | network | sysmon | calendar.
-    // La franja lateral oscura actúa como selector de vista.
     property string currentView: "music"
 
-    // Última notificación + badge de no leída.
     property string notifTitle: ""
     property string notifBody: ""
     property string notifTime: ""

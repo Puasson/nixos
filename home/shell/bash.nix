@@ -15,8 +15,8 @@
       nrs = "sudo nixos-rebuild switch --flake $HOME/nixos#nixos";
       nrt = "sudo nixos-rebuild test --flake $HOME/nixos#nixos";
       nrd = "sudo nixos-rebuild dry-build --flake $HOME/nixos#nixos";
-      hms = "home-manager switch --flake $HOME/nixos#edu";
-      hmn = "home-manager news --flake $HOME/nixos#edu";
+      hms = "home-manager switch --flake $HOME/nixos#sora";
+      hmn = "home-manager news --flake $HOME/nixos#sora";
       delete = "sudo nix-collect-garbage -d";
       update = "nix flake update";
       "datos" = "cd /mnt/Datos";

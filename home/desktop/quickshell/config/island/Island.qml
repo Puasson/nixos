@@ -12,9 +12,6 @@ PanelWindow {
 
     anchors {
         top: true
-        left: root.expanded
-        right: root.expanded
-        bottom: root.expanded
     }
 
     margins {
@@ -26,30 +23,26 @@ PanelWindow {
     exclusiveZone: 28
     focusable: root.expanded
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    WlrLayershell.keyboardFocus: root.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.namespace: "quickshell-island"
 
-    Item {
-        id: fullMask
-        anchors.fill: parent
-    }
-
+    // La mascara sigue al contenido animado (topZone), no al booleano
+    // expanded: asi la region de input acompana al morph sin saltos.
     mask: Region {
-        item: root.expanded ? fullMask : topZone
+        item: topZone
     }
 
     onExpandedChanged: {
         if (root.expanded)
-            cardBox.forceActiveFocus();
+            islandBody.forceActiveFocus();
     }
 
-    // ---- Reloj 24h HH:MM ----
     SystemClock {
         id: clock
         precision: SystemClock.Minutes
     }
     readonly property string timeText: Qt.formatDateTime(clock.date, "HH:mm")
 
-    // ---- Media (MPRIS): primer reproductor en reproducción, si no el primero ----
     readonly property var mprisValues: Mpris.players.values
     readonly property var activePlayer: {
         var vals = root.mprisValues;
@@ -78,27 +71,35 @@ PanelWindow {
         }
     }
 
-    // ---- Estados ----
     readonly property bool expanded: IslandState.manualExpanded
     readonly property string currentView: IslandState.currentView
-    readonly property bool isFullscreen: root.checkFullscreen()
 
-    function checkFullscreen(): bool {
+    // Bindings reactivos: al referenciar las propiedades de Hyprland dentro
+    // del binding, QML se re-suscribe a sus señales. Antes checkFullscreen()
+    // y workspaceLabel() eran funciones puras llamadas una vez (sin
+    // dependencia reactiva) y nunca se actualizaban.
+    readonly property var activeMonitor: Hyprland.monitorFor(root.screen)
+    readonly property var activeWs: root.activeMonitor ? root.activeMonitor.activeWorkspace : null
+    readonly property var wsToplevels: {
         try {
-            if (!root.screen)
-                return false;
-            var mon = Hyprland.monitorFor(root.screen);
-            if (!mon || !mon.activeWorkspace)
-                return false;
-            var tls = mon.activeWorkspace.toplevels;
-            var arr = (tls && tls.values !== undefined) ? tls.values : tls;
-            if (!arr)
-                return false;
+            var tls = root.activeWs ? root.activeWs.toplevels : null;
+            if (!tls)
+                return [];
+            if (tls.values !== undefined)
+                return tls.values;
+            return tls;
+        } catch (e) {
+            return [];
+        }
+    }
+    readonly property bool isFullscreen: {
+        try {
+            var arr = root.wsToplevels;
             for (var i = 0; i < arr.length; i++) {
                 try {
                     if (arr[i] && arr[i].fullscreen)
                         return true;
-                } catch (e) {}
+                } catch (e2) {}
             }
             return false;
         } catch (e) {
@@ -106,15 +107,21 @@ PanelWindow {
         }
     }
 
-    // Etiqueta del workspace activo (solo lectura, sin acción).
+    // Geometría del morph: la píldora central (80x26) crece al panel (548x266).
+    // El alto total 266 = 26 (header) + 8 (separador) + 232 (contenido),
+    // conserva la altura total anterior (26 + 8 + 232) para no mover exclusiveZone.
+    readonly property int pillW: 80
+    readonly property int pillH: 26
+    readonly property int panelW: 548
+    readonly property int panelH: 266
+    readonly property int side: 26
+    readonly property int gap: 6
+
     function workspaceLabel(): string {
         try {
-            if (!root.screen)
+            var ws = root.activeWs;
+            if (!ws)
                 return "–";
-            var mon = Hyprland.monitorFor(root.screen);
-            if (!mon || !mon.activeWorkspace)
-                return "–";
-            var ws = mon.activeWorkspace;
             if (ws.id !== undefined && ws.id !== null) {
                 var num = Number(ws.id);
                 if (!isNaN(num) && num > 0)
@@ -128,27 +135,14 @@ PanelWindow {
         }
     }
 
-    // (IPC en IslandService: instancia única global).
+    // La ventana LayerShell NUNCA cambia de tamano: siempre mide lo del
+    // panel expandido. Antes saltaba de 144x26 a 612x266 en 1 frame y
+    // las regiones recien ampliadas se mostraban en negro varios frames
+    // (fotos 1.png/3.png). El morph lo anima solo el rectangulo interior.
+    readonly property int fullW: root.panelW + (root.side + root.gap) * 2
+    implicitWidth: root.fullW
+    implicitHeight: root.panelH
 
-    // Compacto: 26 (ws) + 6 + 110 (píldora) + 6 + 26 (power) = 174.
-    // Expandido: fila superior + 8 + tarjeta 232.
-    implicitWidth: root.expanded ? 548 : 174
-    implicitHeight: root.expanded ? 266 : 26
-
-    Behavior on implicitWidth {
-        NumberAnimation {
-            duration: Theme.animNormal
-            easing.type: Easing.OutCubic
-        }
-    }
-    Behavior on implicitHeight {
-        NumberAnimation {
-            duration: Theme.animNormal
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    // Fondo clicable fuera de la tarjeta: colapsa a píldora.
     MouseArea {
         id: outsideClick
         anchors.fill: parent
@@ -157,66 +151,184 @@ PanelWindow {
         onClicked: IslandState.collapse()
     }
 
-    // ---- Fila superior: círculo workspace + píldora + círculo power ----
     Item {
         id: topZone
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        width: topRow.implicitWidth
-        height: 26
+        width: root.expanded ? (root.panelW + (root.side + root.gap) * 2) : (root.pillW + (root.side + root.gap) * 2)
+        height: root.expanded ? root.panelH : root.pillH
 
-        RowLayout {
-            id: topRow
-            anchors.fill: parent
-            spacing: 6
+        Behavior on width {
+            NumberAnimation {
+                duration: Theme.animIsland
+                easing.type: Theme.easeOut
+            }
+        }
+        Behavior on height {
+            NumberAnimation {
+                duration: Theme.animIsland
+                easing.type: Theme.easeOut
+            }
+        }
 
-            // Círculo izquierdo: workspace actual, solo muestra, sin función.
-            Rectangle {
-                Layout.preferredWidth: 26
-                Layout.preferredHeight: 26
-                radius: 13
-                color: Theme.bgDock
-                opacity: root.isFullscreen ? 0.55 : 1.0
+        // Círculo lateral izquierdo: workspace. Queda en la esquina exterior,
+        // se desliza hacia fuera al crecer topZone pero siempre visible.
+        Rectangle {
+            id: wsCircle
+            anchors.left: parent.left
+            anchors.top: parent.top
+            width: root.side
+            height: root.side
+            radius: root.side / 2
+            color: Theme.bgDock
+            opacity: root.isFullscreen ? 0.55 : 1.0
 
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Theme.animFast
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.workspaceLabel()
-                    font.pixelSize: 13
-                    font.bold: true
-                    color: Theme.textPrimary
-                    horizontalAlignment: Text.AlignHCenter
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animFast
+                    easing.type: Theme.easeHide
                 }
             }
 
-            // Píldora central: reloj + indicador, clic expande/colapsa.
-            Rectangle {
-                id: pillBox
-                Layout.preferredWidth: 80
-                Layout.preferredHeight: 26
-                radius: 13
-                color: Theme.bgDock
-                opacity: root.isFullscreen ? 0.55 : 1.0
+            Text {
+                anchors.centerIn: parent
+                text: root.workspaceLabel()
+                font.pixelSize: 13
+                font.bold: true
+                color: Theme.textPrimary
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
+        // Círculo lateral derecho: power. Igual que workspace.
+        Rectangle {
+            id: powerCircle
+            anchors.right: parent.right
+            anchors.top: parent.top
+            width: root.side
+            height: root.side
+            radius: root.side / 2
+            color: powerHover.containsMouse ? Theme.bgHover : Theme.bgDock
+            opacity: root.isFullscreen ? 0.55 : 1.0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animFast
+                    easing.type: Theme.easeHide
+                }
+            }
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.animFast
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "power_settings_new"
+                font.family: "Material Symbols Rounded"
+                font.pixelSize: 14
+                color: Theme.textPrimary
+            }
+
+            MouseArea {
+                id: powerHover
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: PowerState.toggle()
+            }
+        }
+
+        // La píldora del medio SE TRANSFORMA en el panel extendido:
+        // mismo Rectangle, anima width 80->548, height 26->266, radius 13->16.
+        Rectangle {
+            id: islandBody
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: root.expanded ? root.panelW : root.pillW
+            height: root.expanded ? root.panelH : root.pillH
+            radius: root.expanded ? Theme.radiusLarge : root.pillH / 2
+            color: Theme.bgDock
+            clip: true
+            opacity: root.isFullscreen ? 0.55 : 1.0
+            focus: true
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: Theme.animIsland
+                    easing.type: Theme.easeOut
+                }
+            }
+            Behavior on height {
+                NumberAnimation {
+                    duration: Theme.animIsland
+                    easing.type: Theme.easeOut
+                }
+            }
+            Behavior on radius {
+                NumberAnimation {
+                    duration: Theme.animIsland
+                    easing.type: Theme.easeOut
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animFast
+                    easing.type: Theme.easeHide
+                }
+            }
+
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape && root.expanded) {
+                    IslandState.collapse();
+                    event.accepted = true;
+                }
+            }
+
+            // Click en zona compacta: expandir. En expandido el fondo bloquea
+            // clicks hacia fuera (el outsideClick de la ventana colapsa).
+            MouseArea {
+                id: pillToggle
+                anchors.fill: parent
+                visible: !root.expanded
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: IslandState.toggleExpanded()
+            }
+            MouseArea {
+                anchors.fill: parent
+                visible: root.expanded
+                acceptedButtons: Qt.LeftButton
+                onClicked: mouse => mouse.accepted = true
+            }
+
+            // Capa compacta: hora + indicadores. Crossfade + escala al expandir.
+            Item {
+                id: compactLayer
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: root.pillW
+                height: root.pillH
+                opacity: root.expanded ? 0.0 : 1.0
+                scale: root.expanded ? 0.8 : 1.0
+                visible: opacity > 0.01
+                transformOrigin: Item.Center
 
                 Behavior on opacity {
                     NumberAnimation {
                         duration: Theme.animFast
-                        easing.type: Easing.OutCubic
+                        easing.type: Theme.easeHide
                     }
                 }
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: IslandState.toggleExpanded()
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.animFast
+                        easing.type: Theme.easeHide
+                    }
                 }
 
                 RowLayout {
@@ -253,182 +365,222 @@ PanelWindow {
                 }
             }
 
-            // Círculo derecho: botón de power, abre el menú de energía.
-            Rectangle {
-                Layout.preferredWidth: 26
-                Layout.preferredHeight: 26
-                radius: 13
-                color: powerHover.containsMouse ? Theme.bgHover : Theme.bgDock
-                opacity: root.isFullscreen ? 0.55 : 1.0
+            // Capa expandida: header (misma franja de 26px de la píldora) +
+            // contenido 232px. Entra con fade + escala 0.95->1.
+            Item {
+                id: expandedLayer
+                anchors.fill: parent
+                opacity: root.expanded ? 1.0 : 0.0
+                scale: root.expanded ? 1.0 : 0.95
+                visible: opacity > 0.01
+                transformOrigin: Item.Top
 
                 Behavior on opacity {
                     NumberAnimation {
                         duration: Theme.animFast
-                        easing.type: Easing.OutCubic
+                        easing.type: Theme.easeHide
                     }
                 }
-
-                Behavior on color {
-                    ColorAnimation {
+                Behavior on scale {
+                    NumberAnimation {
                         duration: Theme.animFast
+                        easing.type: Theme.easeHide
                     }
                 }
 
-                Text {
-                    anchors.centerIn: parent
-                    text: "power_settings_new"
-                    font.family: "Material Symbols Rounded"
-                    font.pixelSize: 14
-                    color: Theme.textPrimary
+                // Header: ocupa la franja de la píldora original, da continuidad.
+                // Click colapsa (la píldora "vuelve").
+                Item {
+                    id: expandedHeader
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: root.pillH
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: IslandState.collapse()
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "expand_less"
+                        font.family: "Material Symbols Rounded"
+                        font.pixelSize: 18
+                        color: Theme.textMuted
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.timeText
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: Theme.textPrimary
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: root.isPlaying
+                        text: "graphic_eq"
+                        font.family: "Material Symbols Rounded"
+                        font.pixelSize: 14
+                        color: Theme.accentGreen
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: !root.isPlaying && IslandState.notifUnread
+                        text: "notifications"
+                        font.family: "Material Symbols Rounded"
+                        font.pixelSize: 14
+                        color: Theme.badgeRed
+                    }
                 }
 
-                MouseArea {
-                    id: powerHover
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: PowerState.toggle()
+                Rectangle {
+                    anchors.top: expandedHeader.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 14
+                    height: 1
+                    color: Qt.rgba(1, 1, 1, 0.08)
                 }
-            }
-        }
-    }
 
-    // ---- Tarjeta extendida: franja lateral + panel de vista ----
-    Rectangle {
-        id: cardBox
-        anchors.top: topZone.bottom
-        anchors.topMargin: 8
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: 548
-        height: 232
-        visible: root.expanded
-        radius: Theme.radiusLarge
-        color: Theme.bgDock
-        clip: true
-        opacity: root.isFullscreen ? 0.55 : 1.0
-        focus: true
-
-        Keys.onPressed: event => {
-            if (event.key === Qt.Key_Escape && root.expanded) {
-                IslandState.collapse();
-                event.accepted = true;
-            }
-        }
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Theme.animFast
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        // Clic dentro de la tarjeta no llega al fondo (no colapsa).
-        MouseArea {
-            anchors.fill: parent
-            visible: root.expanded
-            acceptedButtons: Qt.LeftButton
-            onClicked: mouse => mouse.accepted = true
-        }
-
-        RowLayout {
-            anchors.fill: parent
-            spacing: 0
-            visible: root.expanded
-
-            // Franja lateral oscura: selector de vistas.
-            Rectangle {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 64
-                Layout.fillWidth: false
-                color: Theme.islandSide
-                radius: Theme.radiusLarge
-
-                ColumnLayout {
-                    anchors.fill: parent
+                RowLayout {
+                    anchors.top: expandedHeader.bottom
                     anchors.topMargin: 8
-                    anchors.bottomMargin: 8
-                    spacing: 4
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    spacing: 0
+
+                    Rectangle {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 64
+                        Layout.fillWidth: false
+                        color: Theme.islandSide
+                        radius: Theme.radiusLarge
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.topMargin: 8
+                            anchors.bottomMargin: 8
+                            spacing: 4
+
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                            }
+
+                            IslandSideButton {
+                                icon: "calendar_month"
+                                active: root.currentView === "calendar"
+                                onClicked: IslandState.setView("calendar")
+                            }
+
+                            IslandSideButton {
+                                icon: "music_note"
+                                active: root.currentView === "music"
+                                onClicked: IslandState.setView("music")
+                            }
+
+                            IslandSideButton {
+                                icon: "notifications"
+                                active: root.currentView === "notif"
+                                badge: IslandState.notifUnread
+                                onClicked: IslandState.setView("notif")
+                            }
+
+                            IslandSideButton {
+                                icon: "memory"
+                                active: root.currentView === "sysmon"
+                                onClicked: IslandState.setView("sysmon")
+                            }
+
+                            IslandSideButton {
+                                icon: "wifi"
+                                active: root.currentView === "network"
+                                onClicked: IslandState.setView("network")
+                            }
+
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                            }
+                        }
+                    }
 
                     Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+
+                        // Vistas pesadas (timers, canvas, imágenes, Networking)
+                        // solo se instancian cuando están visibles. Antes las 5
+                        // vivían siempre: 1s Timer de música + 5s Timer de red
+                        // + 3 canvas repintando cada 2s aunque el panel
+                        // estuviera colapsado. Loader activo = LazyLoader de
+                        // la guía de Quickshell (carga diferida, ahorra memoria
+                        // y evita trabajo en background).
+                        Loader {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            active: root.expanded && root.currentView === "music"
+                            sourceComponent: musicComp
+                        }
+                        Component {
+                            id: musicComp
+                            IslandMusicView {
+                                player: root.activePlayer
+                                hasMedia: root.hasMedia
+                            }
+                        }
+
+                        IslandNotifView {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            visible: root.currentView === "notif"
+                        }
+
+                        Loader {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            active: root.expanded && root.currentView === "network"
+                            sourceComponent: networkComp
+                        }
+                        Component {
+                            id: networkComp
+                            IslandNetworkView {
+                            }
+                        }
+
+                        Loader {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            active: root.expanded && root.currentView === "sysmon"
+                            sourceComponent: sysmonComp
+                        }
+                        Component {
+                            id: sysmonComp
+                            IslandSysmonView {
+                            }
+                        }
+
+                        IslandCalendarView {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            visible: root.currentView === "calendar"
+                            baseDate: clock.date
+                        }
                     }
-
-                    IslandSideButton {
-                        icon: "calendar_month"
-                        active: root.currentView === "calendar"
-                        onClicked: IslandState.setView("calendar")
-                    }
-
-                    IslandSideButton {
-                        icon: "music_note"
-                        active: root.currentView === "music"
-                        onClicked: IslandState.setView("music")
-                    }
-
-                    IslandSideButton {
-                        icon: "notifications"
-                        active: root.currentView === "notif"
-                        badge: IslandState.notifUnread
-                        onClicked: IslandState.setView("notif")
-                    }
-
-                    IslandSideButton {
-                        icon: "memory"
-                        active: root.currentView === "sysmon"
-                        onClicked: IslandState.setView("sysmon")
-                    }
-
-                    IslandSideButton {
-                        icon: "wifi"
-                        active: root.currentView === "network"
-                        onClicked: IslandState.setView("network")
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                    }
-                }
-            }
-
-            // Panel de la vista activa.
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-
-                IslandMusicView {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    visible: root.currentView === "music"
-                    player: root.activePlayer
-                    hasMedia: root.hasMedia
-                }
-
-                IslandNotifView {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    visible: root.currentView === "notif"
-                }
-
-                IslandNetworkView {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    visible: root.currentView === "network"
-                }
-
-                IslandSysmonView {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    visible: root.currentView === "sysmon"
-                }
-
-                IslandCalendarView {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    visible: root.currentView === "calendar"
-                    baseDate: clock.date
                 }
             }
         }

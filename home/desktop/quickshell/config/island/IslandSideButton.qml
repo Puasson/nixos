@@ -1,4 +1,3 @@
-// Botón de la franja lateral: icono Material Symbols + badge opcional.
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
@@ -32,7 +31,6 @@ Item {
         color: root.active ? Theme.textPrimary : Theme.textMuted
     }
 
-    // Punto de no leído (notificaciones).
     Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 12

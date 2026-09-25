@@ -15,8 +15,8 @@
   ];
 
   home = {
-    username = "edu";
-    homeDirectory = "/home/edu";
+    username = "sora";
+    homeDirectory = "/home/sora";
     stateVersion = "26.05";
   };
 
@@ -25,16 +25,18 @@
 
   home.packages = with pkgs; [
     brave-origin
-    # gimp
+    gimp
     audacity
     tauon
     cava
-    # onlyoffice-desktopeditors
     img2pdf
-    # obsidian
+    obsidian
     gnome-text-editor
-    # zapzap
     pinta
     papers
+    karere
+    onlyoffice-desktopeditors
+    obs-studio
+    qbittorrent
   ];
 }

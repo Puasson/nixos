@@ -25,6 +25,7 @@ PanelWindow {
 
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
+    WlrLayershell.namespace: "quickshell-dock"
 
     mask: Region {
         item: dockBox
@@ -33,13 +34,46 @@ PanelWindow {
     property int iconSize: 38
 
     property string screenName: root.screen ? root.screen.name : ""
-    property int windowCount: root.workspaceWindowCount()
+    // Conteo reactivo: al referenciar monitor/workspace/toplevels en el
+    // binding, QML se reevalúa con cada cambio. Antes era una llamada a
+    // función pura (workspaceWindowCount) sin dependencias y quedaba fijo.
+    readonly property var activeMonitor: Hyprland.monitorFor(root.screen)
+    readonly property var tlsArray: {
+        try {
+            if (!Hyprland.toplevels)
+                return [];
+            if (Hyprland.toplevels.values !== undefined)
+                return Hyprland.toplevels.values;
+            return Hyprland.toplevels;
+        } catch (e) {
+            return [];
+        }
+    }
+    readonly property int windowCount: {
+        try {
+            if (!root.activeMonitor || !root.activeMonitor.activeWorkspace)
+                return 0;
+            var tls = root.activeMonitor.activeWorkspace.toplevels;
+            if (!tls)
+                return 0;
+            if (tls.count !== undefined)
+                return tls.count;
+            if (tls.values !== undefined)
+                return tls.values.length;
+            return tls.length || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
     readonly property bool shouldShow: DockState.shouldShow(root.screenName, root.windowCount)
     property bool reallyHidden: true
+    // Retardo antes de ocultar al salir el ratón (evita parpadeo al pasar
+    // entre dock y borde). Antes reutilizaba animDock como intervalo.
+    readonly property int hideDelay: 350
 
     Timer {
         id: hideTimer
-        interval: Theme.animDock
+        interval: root.hideDelay
         repeat: false
         onTriggered: {
             if (!root.shouldShow)
@@ -74,7 +108,7 @@ PanelWindow {
             from: 24
             to: 0
             duration: Theme.animNormal
-            easing.type: Easing.OutCubic
+            easing.type: Theme.easeOut
         }
         NumberAnimation {
             target: dockBox
@@ -82,7 +116,7 @@ PanelWindow {
             from: 0
             to: 1
             duration: Theme.animNormal
-            easing.type: Easing.OutCubic
+            easing.type: Theme.easeOut
         }
     }
 
@@ -94,7 +128,7 @@ PanelWindow {
             from: 0
             to: 24
             duration: Theme.animFast
-            easing.type: Easing.InCubic
+            easing.type: Theme.easeHide
         }
         NumberAnimation {
             target: dockBox
@@ -102,7 +136,7 @@ PanelWindow {
             from: 1
             to: 0
             duration: Theme.animFast
-            easing.type: Easing.InCubic
+            easing.type: Theme.easeHide
         }
         onFinished: {
             if (!root.shouldShow)
@@ -110,33 +144,9 @@ PanelWindow {
         }
     }
 
-    function workspaceWindowCount() {
-        try {
-            if (!root.screen)
-                return 0;
-            var mon = Hyprland.monitorFor(root.screen);
-            if (!mon || !mon.activeWorkspace || !mon.activeWorkspace.toplevels)
-                return 0;
-            var tls = mon.activeWorkspace.toplevels;
-            if (tls.count !== undefined)
-                return tls.count;
-            if (tls.values !== undefined)
-                return tls.values.length;
-            return tls.length || 0;
-        } catch (e) {
-            return 0;
-        }
-    }
-
-    property var pinned: [
-        { desktopId: "brave-origin", match: "brave", icon: "brave", exec: ["uwsm", "app", "--", "brave"], name: "Brave" },
-        { desktopId: "librewolf", match: "librewolf", icon: "librewolf", exec: ["uwsm", "app", "--", "librewolf"], name: "LibreWolf" },
-        { desktopId: "kitty", match: "kitty", icon: "kitty", exec: ["uwsm", "app", "--", "kitty"], name: "Kitty" },
-        { desktopId: "org.gnome.Nautilus", match: "nautilus", icon: "org.gnome.Nautilus", exec: ["uwsm", "app", "--", "nautilus"], name: "Archivos" },
-        { desktopId: "obsidian", match: "obsidian", icon: "obsidian", exec: ["uwsm", "app", "--", "obsidian"], name: "Obsidian" },
-        { desktopId: "bitwarden", match: "bitwarden", icon: "bitwarden", exec: ["uwsm", "app", "--", "bitwarden"], name: "Bitwarden" },
-        { desktopId: "papers", match: "papers", icon: "papers", exec: ["uwsm", "app", "--", "papers"], name: "Papers" }
-    ]
+    // Apps fijadas: se declaran en DockApps.qml (una línea por desktopId).
+    // Todo lo demás (icono, nombre, match, lanzamiento) se deriva solo.
+    property var pinned: DockApps.apps
 
     function lookupEntry(id) {
         var entry = DesktopEntries.byId(id);
@@ -145,12 +155,65 @@ PanelWindow {
         return entry;
     }
 
+    function pinnedIcon(id) {
+        var entry = root.lookupEntry(id);
+        return entry ? entry.icon : String(id);
+    }
+
+    function pinnedName(id) {
+        var entry = root.lookupEntry(id);
+        return entry ? entry.name : String(id);
+    }
+
+    function launchPinned(id) {
+        var entry = root.lookupEntry(id);
+        if (entry)
+            entry.execute();
+        else
+            Quickshell.execDetached(["uwsm", "app", "--", String(id)]);
+    }
+
+    // "brave-origin" debe coincidir con appId "brave-browser", y
+    // "org.gnome.Nautilus" con "org.gnome.nautilus": comparación
+    // bidireccional + por tokens para no exigir el match exacto.
+    function pinnedMatches(appIdLower, pinnedId) {
+        var p = String(pinnedId).toLowerCase();
+        if (p === "" || appIdLower === "")
+            return false;
+        if (appIdLower.indexOf(p) !== -1 || p.indexOf(appIdLower) !== -1)
+            return true;
+        var tokens = p.split(/[^a-z0-9]+/);
+        for (var i = 0; i < tokens.length; i++) {
+            if (tokens[i].length >= 3 && appIdLower.indexOf(tokens[i]) !== -1)
+                return true;
+        }
+        return false;
+    }
+
     function allToplevels() {
-        if (!Hyprland.toplevels)
-            return [];
-        if (Hyprland.toplevels.values !== undefined)
-            return Hyprland.toplevels.values;
-        return Hyprland.toplevels;
+        return root.tlsArray;
+    }
+
+    // Cache de matches por app fijada: se calcula UNA vez por cambio de
+    // toplevels en vez de N veces (una por botón × una por propiedad
+    // running/active/click). Antes cada delegado llamaba a
+    // matchingToplevels() en cada binding => O(pinned × tls) en JS por
+    // cada actualización.
+    readonly property var matchCache: {
+        var c = {};
+        try {
+            var tls = root.tlsArray;
+            for (var p = 0; p < root.pinned.length; p++) {
+                var pid = String(root.pinned[p]);
+                var out = [];
+                for (var i = 0; i < tls.length; i++) {
+                    if (pinnedMatches(appIdOf(tls[i]), pid))
+                        out.push(tls[i]);
+                }
+                c[pid] = out;
+            }
+        } catch (e) {}
+        return c;
     }
 
     function appIdOf(tl) {
@@ -161,14 +224,21 @@ PanelWindow {
         }
     }
 
-    function matchingToplevels(match) {
-        var out = [];
-        var tls = allToplevels();
-        for (var i = 0; i < tls.length; i++) {
-            if (appIdOf(tls[i]).indexOf(match) !== -1)
-                out.push(tls[i]);
+    function matchingToplevels(pinnedId) {
+        try {
+            var hit = root.matchCache[String(pinnedId)];
+            return hit ? hit : [];
+        } catch (e) {
+            return [];
         }
-        return out;
+    }
+
+    function isPinnedAppId(appIdLower) {
+        for (var i = 0; i < root.pinned.length; i++) {
+            if (pinnedMatches(appIdLower, root.pinned[i]))
+                return true;
+        }
+        return false;
     }
 
     function taskIcon(tl) {
@@ -194,7 +264,6 @@ PanelWindow {
         return "Ventana";
     }
 
-    // Fondo flotante centrado.
     Rectangle {
         id: dockBox
         anchors.fill: parent
@@ -210,20 +279,16 @@ PanelWindow {
             anchors.centerIn: parent
             spacing: 2
 
-            // Lanzadores fijados.
             Repeater {
                 model: root.pinned
                 DockButton {
                     required property var modelData
                     iconSize: root.iconSize
-                    iconName: {
-                        var entry = root.lookupEntry(modelData.desktopId);
-                        return entry ? entry.icon : modelData.icon;
-                    }
-                    tooltipText: modelData.name
-                    running: root.matchingToplevels(modelData.match).length > 0
+                    iconName: root.pinnedIcon(modelData)
+                    tooltipText: root.pinnedName(modelData)
+                    running: root.matchingToplevels(modelData).length > 0
                     active: {
-                        var tls = root.matchingToplevels(modelData.match);
+                        var tls = root.matchingToplevels(modelData);
                         for (var i = 0; i < tls.length; i++) {
                             try {
                                 if (tls[i].activated)
@@ -233,26 +298,21 @@ PanelWindow {
                         return false;
                     }
                     onClicked: {
-                        var tls = root.matchingToplevels(modelData.match);
+                        var tls = root.matchingToplevels(modelData);
                         if (tls.length > 0 && tls[0].wayland) {
                             tls[0].wayland.activate();
                         } else {
-                            var entry = root.lookupEntry(modelData.desktopId);
-                            if (entry)
-                                entry.execute();
-                            else
-                                Quickshell.execDetached(modelData.exec);
+                            root.launchPinned(modelData);
                         }
                     }
                     onMiddleClicked: {
-                        var tls = root.matchingToplevels(modelData.match);
+                        var tls = root.matchingToplevels(modelData);
                         if (tls.length > 0 && tls[0].wayland)
                             tls[0].wayland.close();
                     }
                 }
             }
 
-            // Tareas abiertas no fijadas.
             Repeater {
                 model: Hyprland.toplevels
                 DockButton {
@@ -265,11 +325,7 @@ PanelWindow {
                         } catch (e) {}
                         if (appId === "")
                             return false;
-                        for (var i = 0; i < root.pinned.length; i++) {
-                            if (appId.indexOf(root.pinned[i].match) !== -1)
-                                return false;
-                        }
-                        return true;
+                        return !root.isPinnedAppId(appId);
                     }
                     iconName: root.taskIcon(modelData)
                     tooltipText: root.taskLabel(modelData)

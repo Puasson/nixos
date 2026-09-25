@@ -110,8 +110,6 @@
       persistence.enable = true;
       friendly-snippets.enable = true;
 
-      # Ver y editar colores CSS (#1e1e2e, rgb(), hsl()...).
-      # :CccPick edita el color bajo el cursor, :CccConvert cambia el formato.
       ccc = {
         enable = true;
         settings = {
@@ -141,7 +139,6 @@
           yamlls.enable = true;
           pylsp = {
             enable = true;
-            # Formato via conform-nvim (ruff_format); aqui solo lint.
             settings.plugins.ruff.enabled = true;
           };
         };

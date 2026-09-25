@@ -1,4 +1,5 @@
 singleton DockState DockState.qml
+singleton DockApps DockApps.qml
 Dock Dock.qml
 DockButton DockButton.qml
 DockTrigger DockTrigger.qml

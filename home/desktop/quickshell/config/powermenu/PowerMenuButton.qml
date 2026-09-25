@@ -1,4 +1,3 @@
-// Botón circular del menú de energía: icono Material Symbols + etiqueta debajo.
 import QtQuick
 import QtQuick.Layouts
 import "../theme"

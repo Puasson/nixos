@@ -51,13 +51,15 @@ Scope {
         }
     }
 
-    // Apps instaladas ordenadas por nombre.
     property var allApps: DesktopEntries.applications.values.slice().sort(function(a, b) {
         return String(a.name).localeCompare(String(b.name));
     })
 
-    // Filtro por nombre + comentario + id, sin límite: con query
-    // vacía muestra todas las apps.
+    // Tope de resultados: antes el Repeater instanciaba un delegado con
+    // IconImage por CADA app (~200-300) en cada keystroke, reconstruyendo
+    // todo al filtrar. Con tope, como máximo 60 delegados vivos.
+    readonly property int maxResults: 60
+
     property var filtered: {
         var q = root.query.trim().toLowerCase();
         var apps = root.allApps;
@@ -67,10 +69,25 @@ Scope {
         for (var i = 0; i < apps.length; i++) {
             var e = apps[i];
             var hay = (String(e.name || "") + " " + String(e.comment || "") + " " + String(e.id || e.desktopId || "")).toLowerCase();
-            if (hay.indexOf(q) !== -1)
+            if (hay.indexOf(q) !== -1) {
                 out.push(e);
+                if (out.length >= root.maxResults)
+                    break;
+            }
         }
         return out;
+    }
+
+    // Vista recortada: el Repeater solo instancia esto. Cuando el launcher
+    // está cerrado el modelo se vacía y los delegados se destruyen
+    // (equivalente a LazyLoader: sin IconImages en memoria en idle).
+    property var visibleResults: {
+        if (!root.isOpen)
+            return [];
+        var f = root.filtered;
+        if (f.length > root.maxResults)
+            return f.slice(0, root.maxResults);
+        return f;
     }
 
     Variants {
@@ -89,27 +106,24 @@ Scope {
                 bottom: true
             }
 
-            // Ventana flotante a pantalla completa (fondo transparente):
-            // no reserva espacio en el compositor.
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
             focusable: true
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            WlrLayershell.namespace: "quickshell-launcher"
 
             onVisibleChanged: {
                 if (visible)
                     searchInput.forceActiveFocus();
             }
 
-            // Click fuera de la tarjeta cierra el lanzador.
             MouseArea {
                 anchors.fill: parent
                 onClicked: root.close()
             }
 
-            // Tarjeta centrada abajo, por encima del dock (dock ~68px + 12px margen).
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
@@ -118,8 +132,17 @@ Scope {
                 implicitHeight: content.implicitHeight + 24
                 radius: Theme.radiusLarge
                 color: Theme.bgCard
+                // Entrada fluida: fade + deslizamiento GPU (y/opacity, sin
+                // relayout). Easing OutExpo como en el resto del shell.
+                opacity: root.isOpen ? 1.0 : 0.0
 
-                // El click dentro no llega al MouseArea de fondo.
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Theme.animFast
+                        easing.type: Theme.easeOut
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: mouse => mouse.accepted = true
@@ -133,7 +156,6 @@ Scope {
                     anchors.margins: 12
                     spacing: 8
 
-                    // Buscador.
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 44
@@ -160,13 +182,13 @@ Scope {
 
                             Keys.onPressed: event => {
                                 if (event.key === Qt.Key_Down) {
-                                    root.selected = Math.min(root.selected + 1, root.filtered.length - 1);
+                                    root.selected = Math.min(root.selected + 1, root.visibleResults.length - 1);
                                     event.accepted = true;
                                 } else if (event.key === Qt.Key_Up) {
                                     root.selected = Math.max(root.selected - 1, 0);
                                     event.accepted = true;
                                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                    root.launch(root.filtered[root.selected]);
+                                    root.launch(root.visibleResults[root.selected]);
                                     event.accepted = true;
                                 } else if (event.key === Qt.Key_Escape) {
                                     root.close();
@@ -186,7 +208,6 @@ Scope {
                         }
                     }
 
-                    // Resultados: solo icono + nombre, con scroll si hay muchas apps.
                     Flickable {
                         id: resultsFlick
                         Layout.fillWidth: true
@@ -213,7 +234,7 @@ Scope {
                             spacing: 2
 
                             Repeater {
-                                model: root.filtered
+                                model: root.visibleResults
 
                                 Rectangle {
                                     required property var modelData
@@ -263,7 +284,7 @@ Scope {
                         function onSelectedChanged(): void {
                             resultsFlick.ensureVisible(root.selected);
                         }
-                        function onFilteredChanged(): void {
+                        function onVisibleResultsChanged(): void {
                             resultsFlick.contentY = 0;
                             resultsFlick.ensureVisible(root.selected);
                         }
@@ -271,10 +292,18 @@ Scope {
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        visible: root.filtered.length === 0
+                        visible: root.isOpen && root.visibleResults.length === 0
                         text: "Sin resultados"
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontMain
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: root.isOpen && root.filtered.length > root.maxResults
+                        text: "Mostrando " + root.maxResults + " de " + root.filtered.length + " — sigue escribiendo para afinar"
+                        color: Theme.textMuted
+                        font.pixelSize: Theme.fontTiny
                     }
                 }
             }

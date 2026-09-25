@@ -4,8 +4,7 @@ let
   wallpaper-set = pkgs.writeShellApplication {
     name = "wallpaper-set";
     runtimeInputs = with pkgs; [
-      swww
-      mpvpaper
+      awww
       procps
       libnotify
       coreutils
@@ -15,22 +14,6 @@ let
       WALL_DIR="$HOME/Pictures/Wallpaper"
       CACHE_DIR="$HOME/.cache/quickshell/wallpaper"
       CURRENT="$CACHE_DIR/current"
-
-      is_video() {
-        case "$1" in
-          *.mp4 | *.MP4 | *.mkv | *.MKV | *.webm | *.WEBM | *.mov | *.MOV) return 0 ;;
-          *) return 1 ;;
-        esac
-      }
-
-      kill_mpvpaper() {
-        pkill -x mpvpaper 2>/dev/null || true
-        for _ in $(seq 1 10); do
-          pgrep -x mpvpaper >/dev/null 2>&1 || return 0
-          sleep 0.1
-        done
-        pkill -9 -x mpvpaper 2>/dev/null || true
-      }
 
       ensure_daemon() {
         awww query >/dev/null 2>&1 && return 0
@@ -48,25 +31,13 @@ let
         return 1
       }
 
-      apply_image() {
-        kill_mpvpaper
+      apply() {
         ensure_daemon || return 1
         awww img --transition-type simple -- "$1"
       }
 
-      apply_video() {
-        awww kill >/dev/null 2>&1 || true
-        pkill -f "[a]www-daemon" 2>/dev/null || true
-        kill_mpvpaper
-        mpvpaper -f -o "no-audio loop" ALL "$1" & disown
-      }
-
       show() {
-        if is_video "$1"; then
-          apply_video "$1"
-        else
-          apply_image "$1"
-        fi
+        apply "$1"
       }
 
       persist() {
@@ -77,8 +48,7 @@ let
       pick_random() {
         find "$WALL_DIR" -maxdepth 1 -type f \
           \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
-             -o -iname '*.webp' -o -iname '*.gif' \
-             -o -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.webm' \) \
+             -o -iname '*.webp' -o -iname '*.gif' \) \
           | shuf -n 1
       }
 
@@ -116,7 +86,7 @@ in
 {
   home.packages = with pkgs; [
     quickshell
-    swww
+    awww
     wallpaper-set
   ];
 

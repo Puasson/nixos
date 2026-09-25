@@ -2,9 +2,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 
-// Servicio único (una instancia global): captura notificaciones
-// vía NotificationServer y las publica en IslandState.
-// No se instancia por pantalla: se crea una sola vez en shell.qml.
 Scope {
     id: root
 
@@ -23,9 +20,6 @@ Scope {
         }
     }
 
-    // IPC único (aquí y no en Island.qml: Island se instancia
-    // por pantalla y el handler se duplicaría con varios monitores).
-    // Uso: qs ipc call Island toggle|expand|collapse|view <music|notif|network|sysmon|calendar>
     IpcHandler {
         target: "Island"
         function toggle(): void {

@@ -101,7 +101,7 @@
     nix-ld.enable = true;
   };
 
-  users.users.edu = {
+  users.users.sora = {
     isNormalUser = true;
     extraGroups = [
       "wheel"
@@ -118,7 +118,6 @@
     git
     adw-gtk3
     vimix-cursors
-    # librewolf
     polkit_gnome
     qt6.qtwayland
     nautilus

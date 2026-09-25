@@ -1,4 +1,3 @@
-// Vista de notificaciones: última recibida + badge gestionado en IslandState.
 import QtQuick
 import QtQuick.Layouts
 import "../theme"

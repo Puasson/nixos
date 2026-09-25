@@ -5,9 +5,9 @@
     enable = true;
 
     extraPackages = with pkgs; [
-      gh # releases, PRs, issues desde el TUI
-      fd # búsqueda de ficheros (rg ya lo tienes vía nixvim)
-      nixfmt # formatear .nix igual que tu nixd
+      gh
+      fd
+      nixfmt
     ];
 
     settings = {

@@ -43,7 +43,7 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "backup";
-                users.edu = import ./home/home.nix;
+                users.sora = import ./home/home.nix;
                 extraSpecialArgs = { inherit inputs; };
                 sharedModules = [ nixvim.homeModules.nixvim ];
               };
@@ -53,7 +53,7 @@
       };
 
       homeConfigurations = {
-        "edu" = home-manager.lib.homeManagerConfiguration {
+        "sora" = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           extraSpecialArgs = { inherit inputs; };
           modules = [

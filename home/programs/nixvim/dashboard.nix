@@ -39,7 +39,7 @@
             icon_hl = "@variable";
             desc = "Projects";
             group = "DiagnosticHint";
-            action = "Telescope find_files cwd=/home/edu/nixos";
+            action = "Telescope find_files cwd=$HOME/nixos";
             key = "p";
           }
           {
@@ -63,7 +63,7 @@
             icon_hl = "@variable";
             desc = "Config";
             group = "DiagnosticHint";
-            action = "edit /home/edu/nixos/home/programs/nixvim/nixvim.nix";
+            action = "edit $HOME/nixos/home/programs/nixvim/nixvim.nix";
             key = "c";
           }
           {

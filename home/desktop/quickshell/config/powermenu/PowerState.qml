@@ -2,7 +2,6 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// Estado compartido del menú de energía (una sola instancia global).
 QtObject {
     id: root
 

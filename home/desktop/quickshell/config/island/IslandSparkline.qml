@@ -1,4 +1,3 @@
-// Sparkline minimalista estilo 2.png: 1-2 series sobre fondo transparente.
 import QtQuick
 
 Item {
@@ -8,7 +7,6 @@ Item {
     property var values2: []
     property color lineColor: "#f38ba8"
     property color lineColor2: "#a6e3a1"
-    // 0 = auto-escala al pico de los datos; >0 fija el máximo (ej. 1.0 para %).
     property real maxValue: 0
     property real lineWidth: 1.5
 
@@ -70,7 +68,6 @@ Item {
         onPaint: {
             var ctx = getContext("2d");
             ctx.clearRect(0, 0, width, height);
-            // Línea base tenue como en 2.png.
             try {
                 ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.12);
                 ctx.lineWidth = 1;
@@ -85,9 +82,22 @@ Item {
         }
     }
 
-    onValuesChanged: canvas.requestPaint()
-    onValues2Changed: canvas.requestPaint()
-    onPeakChanged: canvas.requestPaint()
+    onValuesChanged: {
+        if (root.visible)
+            canvas.requestPaint();
+    }
+    onValues2Changed: {
+        if (root.visible)
+            canvas.requestPaint();
+    }
+    onPeakChanged: {
+        if (root.visible)
+            canvas.requestPaint();
+    }
+    onVisibleChanged: {
+        if (visible)
+            canvas.requestPaint();
+    }
     onWidthChanged: canvas.requestPaint()
     onHeightChanged: canvas.requestPaint()
     onLineColorChanged: canvas.requestPaint()

@@ -1,5 +1,3 @@
-// Vista de reproducción MPRIS (sin like ni impresora).
-// Recibe el reproductor activo desde Island.qml.
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
@@ -10,12 +8,14 @@ Item {
     property var player: null
     property bool hasMedia: false
 
-    // Tics de 1s para refrescar posición aunque el player no notifique.
     property int tick: 0
 
+    // Solo avanza cuando hay algo sonando Y la vista está visible.
+    // Guía Mpris de Quickshell: Timer con running atado a Playing.
+    // Antes corría siempre (1/s) aunque el panel estuviera colapsado.
     Timer {
         interval: 1000
-        running: true
+        running: root.visible && root.playing && root.hasMedia
         repeat: true
         onTriggered: root.tick++
     }
@@ -79,13 +79,11 @@ Item {
         anchors.fill: parent
         spacing: 14
 
-        // Columna principal: cabecera + progreso + controles.
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 6
 
-            // Cabecera: volver + título/artista + menú.
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
@@ -137,7 +135,6 @@ Item {
                 }
             }
 
-            // Progreso: tiempos + barra.
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
@@ -173,7 +170,6 @@ Item {
                 }
             }
 
-            // Controles circulares: prev / play-pause / next.
             RowLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
@@ -240,7 +236,6 @@ Item {
             }
         }
 
-        // Carátula a la derecha (como la referencia 2.jpeg).
         Rectangle {
             Layout.alignment: Qt.AlignVCenter
             width: 128
@@ -255,6 +250,8 @@ Item {
                 source: root.artUrl
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
+                smooth: true
+                mipmap: true
                 cache: true
             }
 

@@ -3,10 +3,12 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// CPU, RAM y red vía /proc (poll cada 2s). Singleton global: un solo
-// sondeo aunque la isla se instancie por pantalla.
-// Expone valores actuales + historiales para sparklines estilo 2.png.
-// Scope (no QtObject) porque contiene Process/Timer hijos.
+// Monitoreo de sistema sin spawnear procesos.
+// Antes: 3x `cat /proc/...` vía Process cada 2s = 3 forks/2s + parse.
+// Ahora: 3x FileView (lectura async en hilos de Quickshell, sin fork)
+// + un solo Timer que recarga. Según docs de Quickshell, FileView está
+// pensado para archivos pequeños de texto y carga en background sin
+// bloquear el hilo de UI; Process+Timer por ventana se desaconseja.
 Scope {
     id: root
 
@@ -14,11 +16,9 @@ Scope {
     property real memPct: 0
     property string memText: "—"
 
-    // Red: bytes/s agregados (sin `lo`).
     property real netDown: 0
     property real netUp: 0
 
-    // Historiales para gráficas (máx. 60 puntos ≈ 2 min a 2s).
     property var cpuHist: []
     property var memHist: []
     property var netDownHist: []
@@ -29,6 +29,12 @@ Scope {
     property var _prevTotal: -1
     property var _prevRx: -1
     property var _prevTx: -1
+
+    // El polling sigue corriendo en background para mantener el historial
+    // lleno al abrir la isla, pero FileView.reload() es barato (sin fork).
+    // Si algún día se quiere pausar del todo: pollTimer.running = false
+    // desde fuera cuando la isla lleva mucho colapsada.
+    property bool active: true
 
     function _push(prop, v): void {
         try {
@@ -46,7 +52,6 @@ Scope {
             if (lines.length === 0)
                 return;
             var parts = lines[0].trim().split(/\s+/);
-            // cpu user nice system idle iowait irq softirq steal ...
             if (parts.length < 5 || parts[0] !== "cpu")
                 return;
             var nums = [];
@@ -99,7 +104,6 @@ Scope {
             var tx = 0;
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
-                // "iface: rxBytes ... txBytes ..."
                 var m = line.match(/^([A-Za-z0-9._-]+):\s*(.+)$/);
                 if (!m)
                     continue;
@@ -115,7 +119,6 @@ Scope {
                 var dt = Math.max(1, pollTimer.interval / 1000);
                 root.netDown = Math.max(0, (rx - root._prevRx) / dt);
                 root.netUp = Math.max(0, (tx - root._prevTx) / dt);
-                // Historial en crudo (B/s); el sparkline auto-escala.
                 root._push("netDownHist", root.netDown);
                 root._push("netUpHist", root.netUp);
             }
@@ -124,48 +127,37 @@ Scope {
         } catch (e) {}
     }
 
-    Process {
-        id: statProc
-        command: ["cat", "/proc/stat"]
-        stdout: StdioCollector {
-            onStreamFinished: root._parseStat(text)
-        }
+    FileView {
+        id: statFile
+        path: "/proc/stat"
+        printErrors: false
+        onLoaded: root._parseStat(statFile.text())
     }
 
-    Process {
-        id: memProc
-        command: ["cat", "/proc/meminfo"]
-        stdout: StdioCollector {
-            onStreamFinished: root._parseMem(text)
-        }
+    FileView {
+        id: memFile
+        path: "/proc/meminfo"
+        printErrors: false
+        onLoaded: root._parseMem(memFile.text())
     }
 
-    Process {
-        id: netProc
-        command: ["cat", "/proc/net/dev"]
-        stdout: StdioCollector {
-            onStreamFinished: root._parseNet(text)
-        }
+    FileView {
+        id: netFile
+        path: "/proc/net/dev"
+        printErrors: false
+        onLoaded: root._parseNet(netFile.text())
     }
 
     Timer {
         id: pollTimer
         interval: 2000
-        running: true
+        running: root.active
         repeat: true
+        triggeredOnStart: true
         onTriggered: {
-            if (!statProc.running)
-                statProc.running = true;
-            if (!memProc.running)
-                memProc.running = true;
-            if (!netProc.running)
-                netProc.running = true;
+            statFile.reload();
+            memFile.reload();
+            netFile.reload();
         }
-    }
-
-    Component.onCompleted: {
-        statProc.running = true;
-        memProc.running = true;
-        netProc.running = true;
     }
 }

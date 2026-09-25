@@ -1,6 +1,3 @@
-// Vista de red según ref 1.png: cabecera Network + close,
-// tarjeta Current Connection (iface + IP + desconectar) y
-// tarjeta Wi-Fi (rescan + toggle + lista / "No networks in range").
 import Quickshell.Networking
 import Quickshell.Io
 import QtQuick
@@ -10,7 +7,6 @@ import "../theme"
 Item {
     id: root
 
-    // ---- Dispositivos ----
     readonly property var deviceList: {
         try {
             var devs = Networking.devices ? Networking.devices.values : [];
@@ -20,7 +16,6 @@ Item {
         }
     }
 
-    // Activa: primera conectada que no sea loopback.
     readonly property var activeDevice: {
         try {
             for (var i = 0; i < root.deviceList.length; i++) {
@@ -42,7 +37,6 @@ Item {
         }
     }
 
-    // Red conectada dentro del dispositivo activo (para desconectar fino).
     readonly property var activeNetwork: {
         try {
             if (!root.activeDevice || !root.activeDevice.networks)
@@ -60,7 +54,6 @@ Item {
         return null;
     }
 
-    // Wi-Fi: primer dispositivo con pinta de inalámbrico.
     readonly property var wifiDevice: {
         try {
             for (var i = 0; i < root.deviceList.length; i++) {
@@ -68,7 +61,6 @@ Item {
                 if (!d)
                     continue;
                 try {
-                    // WifiDevice expone scannerEnabled; el resto no.
                     var s = d.scannerEnabled;
                     if (s !== undefined)
                         return d;
@@ -96,7 +88,6 @@ Item {
         }
     }
 
-    // Redes wifi visibles: ssid no vacío, deduplicadas, ordenadas por señal.
     readonly property var wifiNetworks: {
         var out = [];
         try {
@@ -128,7 +119,6 @@ Item {
     }
 
     function wifiIcon(sig): string {
-        // Material Symbols: degradado por intensidad.
         try {
             if (sig >= 0.75)
                 return "wifi";
@@ -149,7 +139,6 @@ Item {
         } catch (e) {}
     }
 
-    // ---- IP vía `ip -4 -o addr show` (Networking no expone IP) ----
     property var ipMap: ({})
 
     function parseIpOut(text): void {
@@ -157,7 +146,6 @@ Item {
             var m = {};
             var lines = String(text || "").split("\n");
             for (var i = 0; i < lines.length; i++) {
-                // "3: wlp2s0    inet 10.26.29.23/24 ..."
                 var parts = lines[i].trim().split(/\s+/);
                 if (parts.length < 4)
                     continue;
@@ -199,7 +187,9 @@ Item {
     Timer {
         id: ipTimer
         interval: 5000
-        running: true
+        // La vista ahora se destruye al ocultarse (Loader), pero además
+        // se pausa si no es visible: evita `ip addr` en background.
+        running: root.visible
         repeat: true
         onTriggered: {
             if (!ipProc.running)
@@ -207,16 +197,19 @@ Item {
         }
     }
 
+    onVisibleChanged: {
+        if (visible && !ipProc.running)
+            ipProc.running = true;
+    }
+
     Component.onCompleted: {
         ipProc.running = true;
     }
 
-    // ---- Layout ----
     ColumnLayout {
         anchors.fill: parent
         spacing: 8
 
-        // Cabecera: Network + close (ref 1.png).
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -253,7 +246,6 @@ Item {
             }
         }
 
-        // Tarjeta 1: Current Connection.
         Rectangle {
             Layout.fillWidth: true
             radius: Theme.radiusMedium
@@ -321,7 +313,6 @@ Item {
             }
         }
 
-        // Tarjeta 2: Wi-Fi.
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -368,7 +359,6 @@ Item {
                         }
                     }
 
-                    // Toggle estilo ref (píldora amarilla en ON).
                     Rectangle {
                         id: wifiToggle
                         Layout.alignment: Qt.AlignVCenter
@@ -395,7 +385,7 @@ Item {
                             Behavior on x {
                                 NumberAnimation {
                                     duration: Theme.animFast
-                                    easing.type: Easing.OutCubic
+                                    easing.type: Theme.easeHide
                                 }
                             }
                         }
@@ -412,7 +402,6 @@ Item {
                     }
                 }
 
-                // Lista o vacío.
                 Text {
                     Layout.fillWidth: true
                     Layout.fillHeight: root.wifiNetworks.length === 0

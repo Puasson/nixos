@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Wayland
 import QtQuick
 
 PanelWindow {
@@ -16,6 +17,7 @@ PanelWindow {
 
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
+    WlrLayershell.namespace: "quickshell-dock-trigger"
 
     MouseArea {
         anchors.fill: parent

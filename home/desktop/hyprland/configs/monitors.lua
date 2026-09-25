@@ -5,7 +5,6 @@ hl.monitor({
 	scale = 1,
 })
 
--- Fallback para cualquier otro monitor / si VGA-1 no está presente
 hl.monitor({
 	output = "",
 	mode = "preferred",

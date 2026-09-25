@@ -1,4 +1,3 @@
-// Vista de calendario: mini-mes navegable en español (lunes primero).
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
@@ -16,7 +15,6 @@ Item {
         var d = new Date(root.baseDate.getFullYear(), root.baseDate.getMonth() + root.monthOffset, 1);
         return d;
     }
-    // 0 = lunes ... 6 = domingo.
     readonly property int firstWeekday: (root.shownMonth.getDay() + 6) % 7
     readonly property int daysInMonth: new Date(root.shownMonth.getFullYear(), root.shownMonth.getMonth() + 1, 0).getDate()
     readonly property int todayDay: root.baseDate.getDate()

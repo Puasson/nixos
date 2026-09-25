@@ -1,5 +1,3 @@
-// Vista de sistema estilo 2.png (compacto 548x232):
-// tarjetas CPU | Memory + Network full-width con sparklines (SysStats).
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
@@ -28,7 +26,6 @@ Item {
     }
 
     function memShort(): string {
-        // SysStats.memText = "usado / total MiB" → "x.x GiB · NN%"
         try {
             var parts = String(SysStats.memText).split("/");
             if (parts.length !== 2)
@@ -46,14 +43,12 @@ Item {
         anchors.fill: parent
         spacing: 8
 
-        // Fila superior: CPU | Memory (~60% de 196px útiles)
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.preferredHeight: 118
             spacing: 8
 
-            // Tarjeta CPU
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -93,7 +88,6 @@ Item {
                 }
             }
 
-            // Tarjeta Memory
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -135,7 +129,6 @@ Item {
             }
         }
 
-        // Fila inferior: Network full-width (~40%)
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true

@@ -17,8 +17,8 @@ Scope {
     property string openedPath: ""
     property string pendingPreview: ""
 
-    readonly property string wallDir: "/home/edu/Pictures/Wallpaper"
-    readonly property string cacheFile: "/home/edu/.cache/quickshell/wallpaper/current"
+    readonly property string wallDir: "/home/sora/Pictures/Wallpaper"
+    readonly property string cacheFile: "/home/sora/.cache/quickshell/wallpaper/current"
 
     function open(): void {
         root.openedPath = root.currentPath;
@@ -35,7 +35,6 @@ Scope {
         else
             root.open();
     }
-    // Cerrar sin guardar: restaura el fondo que había al abrir.
     function cancel(): void {
         previewTimer.stop();
         root.pendingPreview = "";
@@ -50,8 +49,6 @@ Scope {
         root.lastPreview = path;
         Quickshell.execDetached(["wallpaper-set", "--preview", path]);
     }
-    // Debounce de preview (actualmente sin llamadas: hover/teclado solo
-    // resaltan; se conserva por si se quiere reactivar preview al hover).
     function requestPreview(path): void {
         if (!path || path === root.lastPreview)
             return;
@@ -78,7 +75,6 @@ Scope {
         root.selected = Math.floor(Math.random() * root.wallpapers.length);
         root.applySelected();
     }
-    // Hover/teclado solo resaltan: el fondo solo cambia con click/Enter (applySelected).
     function move(delta): void {
         if (root.wallpapers.length === 0)
             return;
@@ -89,8 +85,7 @@ Scope {
     function isImage(name): bool {
         var l = name.toLowerCase();
         return l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".png")
-            || l.endsWith(".webp") || l.endsWith(".gif") || l.endsWith(".mp4")
-            || l.endsWith(".mkv") || l.endsWith(".webm") || l.endsWith(".mov");
+            || l.endsWith(".webp") || l.endsWith(".gif");
     }
 
     Timer {
@@ -100,7 +95,6 @@ Scope {
         onTriggered: root.preview(root.pendingPreview)
     }
 
-    // Lista el directorio en vivo ( Tolera espacios: separa solo por \n ).
     Process {
         id: listProc
         command: ["ls", "-1", root.wallDir]
@@ -118,7 +112,6 @@ Scope {
                     return String(a.name).localeCompare(String(b.name));
                 });
                 root.wallpapers = out;
-                // Re-sincroniza la selección con el fondo persistido.
                 var idx = -1;
                 for (var j = 0; j < out.length; j++) {
                     if (out[j].path === root.currentPath) {
@@ -131,7 +124,6 @@ Scope {
         }
     }
 
-    // Lee el fondo persistido para preseleccionarlo al abrir.
     Process {
         id: currentProc
         command: ["cat", root.cacheFile]
@@ -188,21 +180,18 @@ Scope {
             color: Theme.overlayDim
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            WlrLayershell.namespace: "quickshell-wallpaper"
 
             onVisibleChanged: {
                 if (visible)
                     card.forceActiveFocus();
             }
 
-            // Click fuera de la tarjeta = cancelar (restaura preview).
             MouseArea {
                 anchors.fill: parent
                 onClicked: root.cancel()
             }
 
-            // Contenedor de la tarjeta: traga los clicks de su área para no
-            // cancelar al pulsar huecos del layout (no tiene cromo visual,
-            // la tira flota como en la referencia).
             Item {
                 anchors.centerIn: parent
                 width: Math.min(parent.width - 80, 1180)
@@ -239,7 +228,6 @@ Scope {
                         }
                     }
 
-                    // Encabezado: título + contador + botón aleatorio.
                     RowLayout {
                         Layout.fillWidth: true
 
@@ -279,7 +267,6 @@ Scope {
                         }
                     }
 
-                    // Nombre del fondo seleccionado.
                     Text {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
@@ -289,10 +276,6 @@ Scope {
                         elide: Text.ElideMiddle
                     }
 
-                    // Tira coverflow: ListView horizontal, delegados solapados
-                    // con shear para el efecto paralelogramo. La selección se
-                    // maneja en root.selected; el centrado es animado (Behavior
-                    // en contentX) y el hover solo resalta, sin preview.
                     ListView {
                         id: strip
                         Layout.fillWidth: true
@@ -307,17 +290,12 @@ Scope {
                         preferredHighlightBegin: width / 2 - 100
                         preferredHighlightEnd: width / 2 + 100
                         highlightMoveDuration: Theme.animNormal
+                        highlightMoveVelocity: 1200
+                        // Sin Behavior extra en contentX: StrictlyEnforceRange
+                        // + highlight ya suavizan el centrado. Un
+                        // SmoothedAnimation adicional luchaba contra el
+                        // highlight (doble animador sobre contentX = tirones).
 
-                        Behavior on contentX {
-                            enabled: !strip.moving && !strip.flicking
-                            SmoothedAnimation {
-                                velocity: 1200
-                                duration: Theme.animNormal
-                            }
-                        }
-
-                        // Centrado diferido: evita la cascada hover -> recentrar
-                        // -> nuevo hover -> ... que saltaba de extremo a extremo.
                         Timer {
                             id: centerTimer
                             interval: 90
@@ -353,17 +331,16 @@ Scope {
                             Behavior on scale {
                                 NumberAnimation {
                                     duration: Theme.animFast
-                                    easing.type: Easing.InOutQuad
+                                    easing.type: Theme.easeOut
                                 }
                             }
                             Behavior on opacity {
                                 NumberAnimation {
                                     duration: Theme.animFast
+                                    easing.type: Theme.easeHide
                                 }
                             }
 
-                            // Shear horizontal: x' = x - 0.18*y + 27 (compensa
-                            // el desplazamiento para mantener el centro).
                             transform: Matrix4x4 {
                                 matrix: Qt.matrix4x4(1, -0.18, 0, 27, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
                             }
@@ -380,17 +357,15 @@ Scope {
 
                                 Image {
                                     anchors.fill: parent
-                                    // encodeURI: los nombres contienen espacios
-                                    // ("Anime Girl.jpg"); sin codificar Qt no
-                                    // resuelve el file:// y falla la miniatura.
                                     source: encodeURI("file://" + modelData.path)
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                     cache: true
+                                    smooth: true
+                                    mipmap: true
                                     sourceSize.width: 360
                                 }
 
-                                // Indicador de fondo activo (persistido).
                                 Rectangle {
                                     anchors.top: parent.top
                                     anchors.right: parent.right
@@ -408,9 +383,6 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: {
-                                    // Ignora hovers generados por el propio scroll
-                                    // (el ítem se mueve bajo el cursor) y por drags:
-                                    // solo el movimiento real del mouse resalta.
                                     if (strip.moving || strip.flicking || strip.dragging)
                                         return;
                                     if (root.selected !== index)

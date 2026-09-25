@@ -1,4 +1,3 @@
-// Botón del dock: icono de 38px + indicador de app abierta.
 import Quickshell
 import Quickshell.Widgets
 import QtQuick
@@ -7,7 +6,6 @@ import "../theme"
 Item {
     id: root
 
-    // Tamaño de icono exigido por configuración.
     property int iconSize: 38
     property string iconName: ""
     property string tooltipText: ""
@@ -32,7 +30,6 @@ Item {
             source: Quickshell.iconPath(root.iconName, "application-x-executable")
         }
 
-        // Punto indicador: visible si la app está abierta, resaltado si enfocada.
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 6

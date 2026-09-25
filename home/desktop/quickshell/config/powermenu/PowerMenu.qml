@@ -5,8 +5,6 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-// Menú de energía a pantalla completa: fila horizontal de 5 acciones.
-// Uso: qs ipc call PowerMenu toggle|open|close (SUPER+P en keybindings.lua).
 Scope {
     id: root
 
@@ -29,8 +27,6 @@ Scope {
         root.close();
     }
 
-    // Icono Material Symbols Rounded + etiqueta + comando.
-    // (Sin "Hibernar": requiere swap >= RAM + boot.resumeDevice.)
     readonly property var actions: [
         { icon: "lock", label: "Bloquear", cmd: ["hyprlock"] },
         { icon: "power_settings_new", label: "Apagar", cmd: ["systemctl", "poweroff"] },
@@ -69,28 +65,24 @@ Scope {
                 bottom: true
             }
 
-            // Ventana flotante a pantalla completa (fondo tenue):
-            // no reserva espacio en el compositor.
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
             focusable: true
             color: Theme.overlayDim
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            WlrLayershell.namespace: "quickshell-powermenu"
 
             onVisibleChanged: {
                 if (visible)
                     cardRow.forceActiveFocus();
             }
 
-            // Clic fuera de la fila cierra el menú.
             MouseArea {
                 anchors.fill: parent
                 onClicked: root.close()
             }
 
-            // Contenedor centrado: traga los clics de su área para no
-            // cerrar al pulsar los huecos entre botones.
             Item {
                 anchors.centerIn: parent
                 width: cardRow.implicitWidth
