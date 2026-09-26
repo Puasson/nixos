@@ -92,3 +92,4 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURC
 hl.bind("XF86Tools", hl.dsp.exec_cmd("uwsm app -- tauon"), { locked = true })
 
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("qs ipc call PowerMenu toggle"))
+hl.bind(mainMod .. " + SHIFT + I", hl.dsp.exec_cmd("qs ipc call ThemeMenu toggle"))

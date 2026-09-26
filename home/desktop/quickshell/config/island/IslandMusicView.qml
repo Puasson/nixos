@@ -10,9 +10,6 @@ Item {
 
     property int tick: 0
 
-    // Solo avanza cuando hay algo sonando Y la vista está visible.
-    // Guía Mpris de Quickshell: Timer con running atado a Playing.
-    // Antes corría siempre (1/s) aunque el panel estuviera colapsado.
     Timer {
         interval: 1000
         running: root.visible && root.playing && root.hasMedia

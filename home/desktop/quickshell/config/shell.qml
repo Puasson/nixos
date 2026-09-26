@@ -4,6 +4,8 @@ import "dock" as DockModule
 import "island" as IslandModule
 import "launcher" as LauncherModule
 import "powermenu" as PowerMenuModule
+import "theme" as ThemeModule
+import "thememenu" as ThemeMenuModule
 import "wallpaper" as WallpaperModule
 
 ShellRoot {
@@ -28,6 +30,24 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
+        LauncherModule.LauncherCatcher {
+            required property var modelData
+            screen: modelData
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        IslandModule.IslandCatcher {
+            required property var modelData
+            screen: modelData
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
         IslandModule.Island {
             required property var modelData
             screen: modelData
@@ -37,10 +57,16 @@ ShellRoot {
     IslandModule.IslandService {
     }
 
-    LauncherModule.Launcher {
+    LauncherModule.LauncherService {
     }
 
     PowerMenuModule.PowerMenu {
+    }
+
+    ThemeModule.ThemeService {
+    }
+
+    ThemeMenuModule.ThemeMenu {
     }
 
     WallpaperModule.Wallpaper {

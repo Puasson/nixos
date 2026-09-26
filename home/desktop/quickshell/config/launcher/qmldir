@@ -1,0 +1,4 @@
+singleton LauncherState LauncherState.qml
+LauncherService LauncherService.qml
+LauncherPanel LauncherPanel.qml
+LauncherCatcher LauncherCatcher.qml

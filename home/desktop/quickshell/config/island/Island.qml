@@ -32,9 +32,50 @@ PanelWindow {
         item: topZone
     }
 
-    onExpandedChanged: {
-        if (root.expanded)
+    // Foco diferido: el teclado Exclusive lo concede Hyprland de forma
+    // asíncrona y expandedLayer aún anima su fade, así que el
+    // forceActiveFocus síncrono se perdía y Esc no funcionaba sin click.
+    property int focusAttempts: 0
+    Timer {
+        id: focusTimer
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (!root.expanded)
+                return;
             islandBody.forceActiveFocus();
+            if (!islandBody.activeFocus && root.focusAttempts < 3) {
+                root.focusAttempts++;
+                focusTimer.restart();
+            }
+        }
+    }
+
+    onExpandedChanged: {
+        if (root.expanded) {
+            root.expandedFrom = Hyprland.activeToplevel;
+            root.focusAttempts = 0;
+            focusTimer.restart();
+        } else {
+            focusTimer.stop();
+        }
+    }
+
+    // Click fuera sobre una ventana: al enfocar otra app la isla se contrae.
+    // Se ignora null porque el foco Exclusive de la propia isla puede
+    // reportar activeToplevel null al expandir (evita auto-colapso).
+    // Los clicks sobre el escritorio vacío los atrapa IslandCatcher.
+    property var expandedFrom: null
+
+    Connections {
+        target: Hyprland
+        function onActiveToplevelChanged(): void {
+            if (!root.expanded)
+                return;
+            var cur = Hyprland.activeToplevel;
+            if (cur && cur !== root.expandedFrom)
+                IslandState.collapse();
+        }
     }
 
     SystemClock {
@@ -157,6 +198,15 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         width: root.expanded ? (root.panelW + (root.side + root.gap) * 2) : (root.pillW + (root.side + root.gap) * 2)
         height: root.expanded ? root.panelH : root.pillH
+
+        // Respaldo de teclado: si el foco cae en un hijo en vez de islandBody,
+        // Esc sigue colapsando. Lo aceptado por islandBody no burbujea aquí.
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Escape && root.expanded) {
+                IslandState.collapse();
+                event.accepted = true;
+            }
+        }
 
         Behavior on width {
             NumberAnimation {

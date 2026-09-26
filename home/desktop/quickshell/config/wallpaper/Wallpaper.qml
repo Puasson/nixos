@@ -13,20 +13,27 @@ Scope {
     property int selected: 0
     property var wallpapers: []
     property string currentPath: ""
-    property string lastPreview: ""
-    property string openedPath: ""
-    property string pendingPreview: ""
+    // Hold de flechas: -1 izq, +1 der, 0 suelto. Bucle infinito con wrap.
+    property int holdDir: 0
+    // Salto de bucle (ultimo->primero): un frame sin animacion para no animar toda la cinta.
+    property bool instantJump: false
 
     readonly property string wallDir: "/home/sora/Pictures/Wallpaper"
     readonly property string cacheFile: "/home/sora/.cache/quickshell/wallpaper/current"
 
     function open(): void {
-        root.openedPath = root.currentPath;
+        holdDelay.stop();
+        holdTimer.stop();
+        root.holdDir = 0;
+        root.instantJump = false;
         root.isOpen = true;
         listProc.running = true;
         currentProc.running = true;
     }
     function close(): void {
+        holdDelay.stop();
+        holdTimer.stop();
+        root.holdDir = 0;
         root.isOpen = false;
     }
     function toggle(): void {
@@ -36,36 +43,19 @@ Scope {
             root.open();
     }
     function cancel(): void {
-        previewTimer.stop();
-        root.pendingPreview = "";
-        if (root.openedPath !== "" && root.lastPreview !== root.openedPath)
-            Quickshell.execDetached(["wallpaper-set", "--preview", root.openedPath]);
-        root.lastPreview = root.openedPath;
+        // Solo al aplicar: cancelar solo cierra, sin restaurar preview.
         root.close();
     }
-    function preview(path): void {
-        if (!path || path === root.lastPreview)
-            return;
-        root.lastPreview = path;
-        Quickshell.execDetached(["wallpaper-set", "--preview", path]);
-    }
-    function requestPreview(path): void {
-        if (!path || path === root.lastPreview)
-            return;
-        root.pendingPreview = path;
-        previewTimer.restart();
-    }
     function applySelected(): void {
-        previewTimer.stop();
-        root.pendingPreview = "";
+        holdDelay.stop();
+        holdTimer.stop();
+        root.holdDir = 0;
         if (root.wallpapers.length === 0)
             return;
         var item = root.wallpapers[root.selected];
         if (!item)
             return;
         root.currentPath = item.path;
-        root.lastPreview = item.path;
-        root.openedPath = item.path;
         Quickshell.execDetached(["wallpaper-set", "--persist", item.path]);
         root.close();
     }
@@ -79,7 +69,11 @@ Scope {
         if (root.wallpapers.length === 0)
             return;
         var n = root.wallpapers.length;
-        root.selected = (root.selected + delta + n) % n;
+        var next = (root.selected + delta + n) % n;
+        // Wrap ultimo<->primero: marcar salto instantaneo para no animar toda la cinta.
+        var wrapped = (delta > 0 && next < root.selected) || (delta < 0 && next > root.selected);
+        root.instantJump = wrapped;
+        root.selected = next;
     }
 
     function isImage(name): bool {
@@ -88,11 +82,23 @@ Scope {
             || l.endsWith(".webp") || l.endsWith(".gif");
     }
 
+    // Avance constante al mantener pulsado: holdTimer es el unico motor
+    // (se ignoran los auto-repeat del SO). holdDelay da el retardo inicial
+    // para que un toque corto sea exactamente 1 paso.
     Timer {
-        id: previewTimer
-        interval: 120
+        id: holdDelay
+        interval: 350
         repeat: false
-        onTriggered: root.preview(root.pendingPreview)
+        onTriggered: holdTimer.start()
+    }
+    Timer {
+        id: holdTimer
+        interval: 140
+        repeat: true
+        onTriggered: {
+            if (root.holdDir !== 0)
+                root.move(root.holdDir);
+        }
     }
 
     Process {
@@ -132,8 +138,6 @@ Scope {
                 var p = String(this.text || "").replace(/\r?\n$/, "");
                 if (p !== "")
                     root.currentPath = p;
-                root.openedPath = root.currentPath;
-                root.lastPreview = root.currentPath;
                 for (var j = 0; j < root.wallpapers.length; j++) {
                     if (root.wallpapers[j].path === root.currentPath) {
                         root.selected = j;
@@ -210,11 +214,24 @@ Scope {
                     focus: true
 
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Left || event.key === Qt.Key_Down) {
+                        if (event.key === Qt.Key_Left) {
+                            // El auto-repeat del SO no avanza: holdTimer es el unico motor.
+                            if (event.isAutoRepeat) {
+                                event.accepted = true;
+                                return;
+                            }
+                            root.holdDir = -1;
                             root.move(-1);
+                            holdDelay.restart();
                             event.accepted = true;
-                        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Up) {
+                        } else if (event.key === Qt.Key_Right) {
+                            if (event.isAutoRepeat) {
+                                event.accepted = true;
+                                return;
+                            }
+                            root.holdDir = 1;
                             root.move(1);
+                            holdDelay.restart();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             root.applySelected();
@@ -224,6 +241,21 @@ Scope {
                             event.accepted = true;
                         } else if (event.key === Qt.Key_R) {
                             root.applyRandom();
+                            event.accepted = true;
+                        }
+                        // Up/Down ignorados a proposito: cinta horizontal solo ←/→.
+                    }
+
+                    Keys.onReleased: event => {
+                        if (event.key === Qt.Key_Left && root.holdDir === -1) {
+                            root.holdDir = 0;
+                            holdDelay.stop();
+                            holdTimer.stop();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Right && root.holdDir === 1) {
+                            root.holdDir = 0;
+                            holdDelay.stop();
+                            holdTimer.stop();
                             event.accepted = true;
                         }
                     }
@@ -285,16 +317,36 @@ Scope {
                         spacing: -34
                         model: root.wallpapers
                         boundsBehavior: Flickable.StopAtBounds
+                        // Drag sin funcion (acordado): ni mouse ni touch desplazan.
+                        interactive: false
+                        // Solo ←/→ via card.Keys: evita doble manejo nativo.
+                        keyNavigationEnabled: false
+                        focus: false
                         currentIndex: root.selected
                         highlightRangeMode: ListView.StrictlyEnforceRange
                         preferredHighlightBegin: width / 2 - 100
                         preferredHighlightEnd: width / 2 + 100
-                        highlightMoveDuration: Theme.animNormal
-                        highlightMoveVelocity: 1200
+                        // Hold templado (~7/s): animacion corta < intervalo 140ms para no encolar.
+                        // Bucle: 1ms en el salto ultimo<->primero para no cruzar toda la cinta.
+                        highlightMoveDuration: root.instantJump ? 1 : (holdTimer.running ? 100 : Theme.animNormal)
+                        highlightMoveVelocity: holdTimer.running ? 2000 : 1200
                         // Sin Behavior extra en contentX: StrictlyEnforceRange
                         // + highlight ya suavizan el centrado. Un
                         // SmoothedAnimation adicional luchaba contra el
                         // highlight (doble animador sobre contentX = tirones).
+
+                        // Rueda mueve cinta (acordado): paso simple por evento.
+                        WheelHandler {
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            orientation: Qt.Vertical
+                            onWheel: event => {
+                                if (event.angleDelta.y < 0)
+                                    root.move(1);
+                                else if (event.angleDelta.y > 0)
+                                    root.move(-1);
+                                event.accepted = true;
+                            }
+                        }
 
                         Timer {
                             id: centerTimer
@@ -306,7 +358,15 @@ Scope {
                         Connections {
                             target: root
                             function onSelectedChanged() {
-                                centerTimer.restart();
+                                if (root.instantJump) {
+                                    strip.positionViewAtIndex(root.selected, ListView.Center);
+                                    root.instantJump = false;
+                                    return;
+                                }
+                                // En hold, StrictlyEnforceRange ya sigue solo; recentrar
+                                // manual solo entorpece (tirones). Solo para pasos aislados.
+                                if (!holdTimer.running)
+                                    centerTimer.restart();
                             }
                         }
 
@@ -383,12 +443,16 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: {
-                                    if (strip.moving || strip.flicking || strip.dragging)
+                                    // Hover no roba durante hold de flechas.
+                                    if (root.holdDir !== 0)
                                         return;
                                     if (root.selected !== index)
                                         root.selected = index;
                                 }
                                 onClicked: {
+                                    holdDelay.stop();
+                                    holdTimer.stop();
+                                    root.holdDir = 0;
                                     root.selected = index;
                                     root.applySelected();
                                 }

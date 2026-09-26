@@ -82,12 +82,150 @@ let
       esac
     '';
   };
+
+  theme-set = pkgs.writeShellApplication {
+    name = "theme-set";
+    runtimeInputs = with pkgs; [
+      dconf
+      glib
+      quickshell
+      libnotify
+      coreutils
+      findutils
+      wallpaper-set
+    ];
+    text = ''
+      FAMILIES="catppuccin nord gruvbox tokyonight dracula everforest kanagawa rosepine"
+      CACHE_DIR="$HOME/.cache/quickshell/theme"
+      FAMILY_FILE="$CACHE_DIR/family"
+      MODE_FILE="$CACHE_DIR/mode"
+      WALL_BASE="$HOME/Pictures/Wallpaper"
+
+      cur_family() {
+        if [ -f "$FAMILY_FILE" ]; then
+          cat "$FAMILY_FILE"
+        else
+          printf 'catppuccin'
+        fi
+      }
+
+      cur_mode() {
+        if [ -f "$MODE_FILE" ]; then
+          cat "$MODE_FILE"
+        else
+          printf 'dark'
+        fi
+      }
+
+      valid_family() {
+        case " $FAMILIES " in
+          *" $1 "*) return 0 ;;
+          *) return 1 ;;
+        esac
+      }
+
+      next_family() {
+        local cur="$1" first="" f found=0
+        for f in $FAMILIES; do
+          [ -z "$first" ] && first="$f"
+          if [ "$found" -eq 1 ]; then
+            printf '%s' "$f"
+            return 0
+          fi
+          [ "$f" = "$cur" ] && found=1
+        done
+        printf '%s' "$first"
+      }
+
+      set_gtk() {
+        if [ "$1" = "light" ]; then
+          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
+          gsettings set org.gnome.desktop.interface gtk-theme "adw-gtk3" 2>/dev/null || true
+          gsettings set org.gnome.desktop.interface icon-theme "WhiteSur-light" 2>/dev/null || true
+        else
+          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+          gsettings set org.gnome.desktop.interface gtk-theme "adw-gtk3-dark" 2>/dev/null || true
+          gsettings set org.gnome.desktop.interface icon-theme "WhiteSur-dark" 2>/dev/null || true
+        fi
+      }
+
+      set_qs() {
+        mkdir -p "$CACHE_DIR"
+        printf '%s' "$1" > "$FAMILY_FILE"
+        printf '%s' "$2" > "$MODE_FILE"
+        qs ipc call Theme setFamily "$1" >/dev/null 2>&1 || true
+        qs ipc call Theme setMode "$2" >/dev/null 2>&1 || true
+      }
+
+      set_wallpaper() {
+        local dir=""
+        for d in "$WALL_BASE/$1/$2" "$WALL_BASE/$1" "$WALL_BASE"; do
+          if [ -d "$d" ]; then
+            dir="$d"
+            break
+          fi
+        done
+        [ -n "$dir" ] || return 0
+        local img
+        img="$(find "$dir" -maxdepth 1 -type f \
+          \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
+             -o -iname '*.webp' -o -iname '*.gif' \) \
+          | shuf -n 1)"
+        [ -n "$img" ] && wallpaper-set --persist "$img" >/dev/null 2>&1 || true
+      }
+
+      apply() {
+        set_gtk "$2"
+        set_qs "$1" "$2"
+        set_wallpaper "$1" "$2"
+        notify-send -i preferences-desktop-theme "Tema" "$1 · $2"
+      }
+
+      FAMILY="$(cur_family)"
+      MODE="$(cur_mode)"
+      WANT_FAMILY=""
+      WANT_MODE=""
+      ACTION=""
+
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --family)
+            WANT_FAMILY="$2"
+            shift 2
+            ;;
+          --mode)
+            WANT_MODE="$2"
+            shift 2
+            ;;
+          --toggle) ACTION="toggle"; shift ;;
+          --next) ACTION="next"; shift ;;
+          --list) for f in $FAMILIES; do printf '%s\n' "$f"; done; exit 0 ;;
+          --status) printf '%s %s\n' "$FAMILY" "$MODE"; exit 0 ;;
+          *) echo "Uso: theme-set [--family F] [--mode dark|light] | --toggle | --next | --list | --status" >&2; exit 1 ;;
+        esac
+      done
+
+      if [ "$ACTION" = "toggle" ]; then
+        [ "$MODE" = "dark" ] && MODE="light" || MODE="dark"
+      elif [ "$ACTION" = "next" ]; then
+        FAMILY="$(next_family "$FAMILY")"
+      fi
+      [ -n "$WANT_FAMILY" ] && FAMILY="$WANT_FAMILY"
+      [ -n "$WANT_MODE" ] && MODE="$WANT_MODE"
+
+      valid_family "$FAMILY" || { echo "Familia desconocida: $FAMILY" >&2; exit 1; }
+      [ "$MODE" = "dark" ] || [ "$MODE" = "light" ] || { echo "Modo desconocido: $MODE" >&2; exit 1; }
+
+      apply "$FAMILY" "$MODE"
+    '';
+  };
 in
 {
   home.packages = with pkgs; [
     quickshell
     awww
     wallpaper-set
+    theme-set
   ];
 
   home.file.".config/quickshell".source = ./config;

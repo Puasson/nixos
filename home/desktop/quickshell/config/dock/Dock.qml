@@ -5,7 +5,16 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
+import "../launcher" as LauncherModule
 
+// Dock que SE TRANSFORMA en el lanzador (morph estilo isla dinámica):
+// Super+A (LauncherMenu toggle) expande la píldora al panel de búsqueda.
+// La fila de apps persiste abajo como franja de continuidad, igual que el
+// header de 26px de la isla.
+//
+// La ventana LayerShell NUNCA cambia de tamaño: siempre mide lo del panel
+// expandido (truco de Island.qml). El morph lo anima solo el rectángulo
+// interior, sin frames negros ni tearing.
 PanelWindow {
     id: root
 
@@ -17,14 +26,21 @@ PanelWindow {
         bottom: 10
     }
 
-    implicitHeight: 60
-    implicitWidth: dockRow.implicitWidth + 24
+    readonly property int panelW: 470
+    readonly property int panelH: 480
+    readonly property int compactH: 60
+    readonly property int compactW: footerRow.implicitWidth + 24
+
+    implicitWidth: Math.max(root.panelW, root.compactW)
+    implicitHeight: root.panelH
 
     color: "transparent"
     visible: !reallyHidden
 
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
+    focusable: root.expanded
+    WlrLayershell.keyboardFocus: root.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell-dock"
 
     mask: Region {
@@ -65,7 +81,9 @@ PanelWindow {
             return 0;
         }
     }
-    readonly property bool shouldShow: DockState.shouldShow(root.screenName, root.windowCount)
+    // Con el lanzador abierto el dock no se auto-oculta nunca.
+    readonly property bool expanded: LauncherModule.LauncherState.isOpen
+    readonly property bool shouldShow: root.expanded || DockState.shouldShow(root.screenName, root.windowCount)
     property bool reallyHidden: true
     // Retardo antes de ocultar al salir el ratón (evita parpadeo al pasar
     // entre dock y borde). Antes reutilizaba animDock como intervalo.
@@ -81,6 +99,25 @@ PanelWindow {
         }
     }
 
+    // Foco diferido del buscador: el teclado Exclusive lo concede Hyprland de
+    // forma asíncrona y searchZone aún anima su fade (animFast 150ms), así que
+    // el forceActiveFocus síncrono se perdía y había que hacer click/hover.
+    property int focusAttempts: 0
+    Timer {
+        id: focusTimer
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (!root.expanded)
+                return;
+            searchPanel.focusSearch();
+            if (!searchPanel.searchHasFocus && root.focusAttempts < 3) {
+                root.focusAttempts++;
+                focusTimer.restart();
+            }
+        }
+    }
+
     onShouldShowChanged: {
         if (root.shouldShow) {
             hideAnim.stop();
@@ -88,6 +125,21 @@ PanelWindow {
             root.reallyHidden = false;
         } else {
             hideTimer.restart();
+        }
+    }
+
+    onExpandedChanged: {
+        if (root.expanded) {
+            hideAnim.stop();
+            hideTimer.stop();
+            root.reallyHidden = false;
+            root.focusAttempts = 0;
+            focusTimer.restart();
+        } else if (!root.shouldShow) {
+            focusTimer.stop();
+            hideTimer.restart();
+        } else {
+            focusTimer.stop();
         }
     }
 
@@ -264,90 +316,213 @@ PanelWindow {
         return "Ventana";
     }
 
+    // La píldora SE TRANSFORMA en el panel del lanzador: mismo Rectangle,
+    // anima width/height con la curva de la isla (OutExpo 280ms).
     Rectangle {
         id: dockBox
-        anchors.fill: parent
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: root.expanded ? Math.max(root.panelW, root.compactW) : root.compactW
+        height: root.expanded ? root.panelH : root.compactH
         radius: Theme.radiusLarge
         color: Theme.bgDock
+        clip: true
+        // Respaldo de teclado: si el foco cae fuera del TextInput (p. ej. tras
+        // un click en la lista), las flechas/Enter/Esc siguen funcionando. Los
+        // eventos aceptados por el TextInput no burbujean hasta aquí.
+        focus: true
+        Keys.onPressed: event => {
+            if (!root.expanded)
+                return;
+            if (event.key === Qt.Key_Down) {
+                LauncherModule.LauncherState.selected = Math.min(LauncherModule.LauncherState.selected + 1, LauncherModule.LauncherState.visibleResults.length - 1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Up) {
+                LauncherModule.LauncherState.selected = Math.max(LauncherModule.LauncherState.selected - 1, 0);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                LauncherModule.LauncherState.launch(LauncherModule.LauncherState.visibleResults[LauncherModule.LauncherState.selected]);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
+                LauncherModule.LauncherState.close();
+                event.accepted = true;
+            }
+        }
 
         transform: Translate {
             id: boxSlide
         }
 
-        RowLayout {
-            id: dockRow
-            anchors.centerIn: parent
-            spacing: 2
+        Behavior on width {
+            NumberAnimation {
+                duration: Theme.animIsland
+                easing.type: Theme.easeOut
+            }
+        }
+        Behavior on height {
+            NumberAnimation {
+                duration: Theme.animIsland
+                easing.type: Theme.easeOut
+            }
+        }
 
-            Repeater {
-                model: root.pinned
-                DockButton {
-                    required property var modelData
-                    iconSize: root.iconSize
-                    iconName: root.pinnedIcon(modelData)
-                    tooltipText: root.pinnedName(modelData)
-                    running: root.matchingToplevels(modelData).length > 0
-                    active: {
-                        var tls = root.matchingToplevels(modelData);
-                        for (var i = 0; i < tls.length; i++) {
-                            try {
-                                if (tls[i].activated)
-                                    return true;
-                            } catch (e) {}
-                        }
-                        return false;
-                    }
-                    onClicked: {
-                        var tls = root.matchingToplevels(modelData);
-                        if (tls.length > 0 && tls[0].wayland) {
-                            tls[0].wayland.activate();
-                        } else {
-                            root.launchPinned(modelData);
-                        }
-                    }
-                    onMiddleClicked: {
-                        var tls = root.matchingToplevels(modelData);
-                        if (tls.length > 0 && tls[0].wayland)
-                            tls[0].wayland.close();
-                    }
+        // Zona de búsqueda: entra con fade + escala desde arriba (como
+        // expandedLayer de la isla). La fila del dock persiste abajo como
+        // franja de continuidad.
+        Item {
+            id: searchZone
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: 12
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            height: root.panelH - root.compactH - 24
+            opacity: root.expanded ? 1.0 : 0.0
+            scale: root.expanded ? 1.0 : 0.95
+            visible: opacity > 0.01
+            transformOrigin: Item.Top
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animFast
+                    easing.type: Theme.easeOut
+                }
+            }
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.animFast
+                    easing.type: Theme.easeOut
                 }
             }
 
-            Repeater {
-                model: Hyprland.toplevels
-                DockButton {
-                    required property var modelData
-                    iconSize: root.iconSize
-                    visible: {
-                        var appId = "";
-                        try {
-                            appId = (modelData && modelData.wayland && modelData.wayland.appId) ? String(modelData.wayland.appId).toLowerCase() : "";
-                        } catch (e) {}
-                        if (appId === "")
-                            return false;
-                        return !root.isPinnedAppId(appId);
-                    }
-                    iconName: root.taskIcon(modelData)
-                    tooltipText: root.taskLabel(modelData)
-                    running: true
-                    active: {
-                        try {
-                            return !!modelData.activated;
-                        } catch (e) {
+            LauncherModule.LauncherPanel {
+                id: searchPanel
+                anchors.fill: parent
+            }
+        }
+
+        Item {
+            id: footerZone
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: root.compactH
+
+            RowLayout {
+                id: footerRow
+                anchors.centerIn: parent
+                spacing: 2
+
+                Repeater {
+                    model: root.pinned
+                    DockButton {
+                        required property var modelData
+                        iconSize: root.iconSize
+                        iconName: root.pinnedIcon(modelData)
+                        tooltipText: root.pinnedName(modelData)
+                        running: root.matchingToplevels(modelData).length > 0
+                        active: {
+                            var tls = root.matchingToplevels(modelData);
+                            for (var i = 0; i < tls.length; i++) {
+                                try {
+                                    if (tls[i].activated)
+                                        return true;
+                                } catch (e) {}
+                            }
                             return false;
                         }
+                        onClicked: {
+                            var tls = root.matchingToplevels(modelData);
+                            if (tls.length > 0 && tls[0].wayland) {
+                                tls[0].wayland.activate();
+                            } else {
+                                root.launchPinned(modelData);
+                            }
+                        }
+                        onMiddleClicked: {
+                            var tls = root.matchingToplevels(modelData);
+                            if (tls.length > 0 && tls[0].wayland)
+                                tls[0].wayland.close();
+                        }
                     }
-                    onClicked: {
-                        try {
-                            if (modelData.wayland)
-                                modelData.wayland.activate();
-                        } catch (e) {}
+                }
+
+                Repeater {
+                    model: Hyprland.toplevels
+                    DockButton {
+                        required property var modelData
+                        iconSize: root.iconSize
+                        visible: {
+                            var appId = "";
+                            try {
+                                appId = (modelData && modelData.wayland && modelData.wayland.appId) ? String(modelData.wayland.appId).toLowerCase() : "";
+                            } catch (e) {}
+                            if (appId === "")
+                                return false;
+                            return !root.isPinnedAppId(appId);
+                        }
+                        iconName: root.taskIcon(modelData)
+                        tooltipText: root.taskLabel(modelData)
+                        running: true
+                        active: {
+                            try {
+                                return !!modelData.activated;
+                            } catch (e) {
+                                return false;
+                            }
+                        }
+                        onClicked: {
+                            try {
+                                if (modelData.wayland)
+                                    modelData.wayland.activate();
+                            } catch (e) {}
+                        }
+                        onMiddleClicked: {
+                            try {
+                                if (modelData.wayland)
+                                    modelData.wayland.close();
+                            } catch (e) {}
+                        }
                     }
-                    onMiddleClicked: {
-                        try {
-                            if (modelData.wayland)
-                                modelData.wayland.close();
-                        } catch (e) {}
+                }
+
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 1
+                    height: 28
+                    color: Qt.rgba(1, 1, 1, 0.1)
+                }
+
+                // Botón lanzador: alterna el morph (equivale a Super+A).
+                // Queda resaltado en acento mientras el panel está abierto.
+                Item {
+                    width: 52
+                    height: 48
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 40
+                        height: 40
+                        radius: 12
+                        color: gridHover.containsMouse ? Theme.bgHover : "transparent"
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "apps"
+                        font.family: "Material Symbols Rounded"
+                        font.pixelSize: 24
+                        color: root.expanded ? Theme.accentBlue : Theme.textPrimary
+                    }
+
+                    MouseArea {
+                        id: gridHover
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: LauncherModule.LauncherState.toggle()
                     }
                 }
             }

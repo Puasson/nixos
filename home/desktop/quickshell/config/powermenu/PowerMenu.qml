@@ -32,7 +32,8 @@ Scope {
         { icon: "power_settings_new", label: "Apagar", cmd: ["systemctl", "poweroff"] },
         { icon: "restart_alt", label: "Reiniciar", cmd: ["systemctl", "reboot"] },
         { icon: "logout", label: "Cerrar sesión", cmd: ["uwsm", "stop"] },
-        { icon: "bedtime", label: "Suspender", cmd: ["systemctl", "suspend"] }
+        { icon: "bedtime", label: "Suspender", cmd: ["systemctl", "suspend"] },
+        { icon: "ac_unit", label: "Hibernar", cmd: ["sh", "-c", "hyprlock & sleep 1; systemctl hibernate"] }
     ]
 
     IpcHandler {

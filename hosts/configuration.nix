@@ -8,6 +8,7 @@
 
   boot = {
     kernelPackages = pkgs.linuxPackages_zen;
+    resumeDevice = "/dev/disk/by-uuid/12935019-497d-463a-8ae2-461e0de2b5b9";
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;

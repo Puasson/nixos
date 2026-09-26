@@ -38,5 +38,6 @@
     onlyoffice-desktopeditors
     obs-studio
     qbittorrent
+    inkscape
   ];
 }

@@ -59,7 +59,7 @@
     };
   };
 
-  home.sessionVariables = {
-    GTK_THEME = "adw-gtk3-dark";
-  };
+  # Estado inicial oscuro. El cambio en runtime lo maneja `theme-set`
+  # (dconf + gsettings); no fijar GTK_THEME aqui porque pisaria el
+  # toggle para apps lanzadas via `uwsm app`.
 }

@@ -9,3 +9,4 @@ IslandNetworkView IslandNetworkView.qml
 IslandSysmonView IslandSysmonView.qml
 IslandCalendarView IslandCalendarView.qml
 IslandSparkline IslandSparkline.qml
+IslandCatcher IslandCatcher.qml
