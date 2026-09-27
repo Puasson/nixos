@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   wallpaper-set = pkgs.writeShellApplication {
@@ -83,16 +83,111 @@ let
     '';
   };
 
-  theme-set = pkgs.writeShellApplication {
-    name = "theme-set";
+  theme-apply = pkgs.writeShellApplication {
+    name = "theme-apply";
     runtimeInputs = with pkgs; [
       dconf
       glib
+      coreutils
+    ];
+    text = ''
+      CACHE_DIR="$HOME/.cache/quickshell/theme"
+      MODE_FILE="$CACHE_DIR/mode"
+      NVIM_BG_FILE="$CACHE_DIR/nvim-background"
+      NVIM_FLAVOUR_FILE="$CACHE_DIR/nvim-flavour"
+      GTK3_INI="$HOME/.config/gtk-3.0/settings.ini"
+      GTK4_INI="$HOME/.config/gtk-4.0/settings.ini"
+
+      usage() {
+        echo "Uso: theme-apply [FAMILIA] {dark|light} | theme-apply --cached" >&2
+        exit 1
+      }
+
+      upsert_ini() {
+        local file="$1" key="$2" value="$3"
+        if [ -L "$file" ]; then
+          return 0
+        fi
+        mkdir -p "$(dirname "$file")" || true
+        if [ -e "$file" ] && [ ! -w "$file" ]; then
+          chmod u+w "$file" || true
+        fi
+        if [ ! -f "$file" ]; then
+          printf '[Settings]\n' > "$file" || true
+        fi
+        if ! grep -q "^\[Settings\]" "$file" 2>/dev/null; then
+          {
+            printf '[Settings]\n'
+            cat "$file" 2>/dev/null
+          } > "$file.tmp" && mv "$file.tmp" "$file" || true
+        fi
+        if grep -q "^$key=" "$file" 2>/dev/null; then
+          sed -i "s|^$key=.*|$key=$value|" "$file" || true
+        else
+          printf '%s=%s\n' "$key" "$value" >> "$file" || true
+        fi
+      }
+
+      apply_gtk() {
+        local gtk_theme icon_theme prefer_dark
+        if [ "$1" = "light" ]; then
+          gtk_theme="adw-gtk3"
+          icon_theme="WhiteSur-light"
+          prefer_dark="false"
+          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
+        else
+          gtk_theme="adw-gtk3-dark"
+          icon_theme="WhiteSur-dark"
+          prefer_dark="true"
+          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+        fi
+        gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2>/dev/null || true
+        for ini in "$GTK3_INI" "$GTK4_INI"; do
+          upsert_ini "$ini" "gtk-theme-name" "$gtk_theme"
+          upsert_ini "$ini" "gtk-icon-theme-name" "$icon_theme"
+          upsert_ini "$ini" "gtk-application-prefer-dark-theme" "$prefer_dark"
+        done
+      }
+
+      apply_nvim() {
+        mkdir -p "$CACHE_DIR" || true
+        if [ "$1" = "light" ]; then
+          printf 'light' > "$NVIM_BG_FILE" || true
+          printf 'latte' > "$NVIM_FLAVOUR_FILE" || true
+        else
+          printf 'dark' > "$NVIM_BG_FILE" || true
+          printf 'mocha' > "$NVIM_FLAVOUR_FILE" || true
+        fi
+      }
+
+      MODE=""
+      if [ "''${1:-}" = "--cached" ]; then
+        [ -f "$MODE_FILE" ] && MODE="$(cat "$MODE_FILE")" || MODE="dark"
+      elif [ $# -eq 2 ]; then
+        MODE="$2"
+      elif [ $# -eq 1 ]; then
+        MODE="$1"
+      else
+        usage
+      fi
+
+      [ "$MODE" = "dark" ] || [ "$MODE" = "light" ] || usage
+
+      apply_gtk "$MODE"
+      apply_nvim "$MODE"
+    '';
+  };
+
+  theme-set = pkgs.writeShellApplication {
+    name = "theme-set";
+    runtimeInputs = with pkgs; [
       quickshell
       libnotify
       coreutils
       findutils
       wallpaper-set
+      theme-apply
     ];
     text = ''
       FAMILIES="catppuccin nord gruvbox tokyonight dracula everforest kanagawa rosepine"
@@ -138,21 +233,13 @@ let
       }
 
       set_gtk() {
-        if [ "$1" = "light" ]; then
-          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-light'" 2>/dev/null || true
-          gsettings set org.gnome.desktop.interface gtk-theme "adw-gtk3" 2>/dev/null || true
-          gsettings set org.gnome.desktop.interface icon-theme "WhiteSur-light" 2>/dev/null || true
-        else
-          dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-          gsettings set org.gnome.desktop.interface gtk-theme "adw-gtk3-dark" 2>/dev/null || true
-          gsettings set org.gnome.desktop.interface icon-theme "WhiteSur-dark" 2>/dev/null || true
-        fi
+        theme-apply "$1" "$2" || true
       }
 
       set_qs() {
-        mkdir -p "$CACHE_DIR"
-        printf '%s' "$1" > "$FAMILY_FILE"
-        printf '%s' "$2" > "$MODE_FILE"
+        mkdir -p "$CACHE_DIR" || true
+        printf '%s' "$1" > "$FAMILY_FILE" || true
+        printf '%s' "$2" > "$MODE_FILE" || true
         qs ipc call Theme setFamily "$1" >/dev/null 2>&1 || true
         qs ipc call Theme setMode "$2" >/dev/null 2>&1 || true
       }
@@ -170,15 +257,15 @@ let
         img="$(find "$dir" -maxdepth 1 -type f \
           \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
              -o -iname '*.webp' -o -iname '*.gif' \) \
-          | shuf -n 1)"
+          | shuf -n 1)" || true
         [ -n "$img" ] && wallpaper-set --persist "$img" >/dev/null 2>&1 || true
       }
 
       apply() {
-        set_gtk "$2"
+        set_gtk "$1" "$2"
         set_qs "$1" "$2"
         set_wallpaper "$1" "$2"
-        notify-send -i preferences-desktop-theme "Tema" "$1 · $2"
+        notify-send -i preferences-desktop-theme "Tema" "$1 · $2" || true
       }
 
       FAMILY="$(cur_family)"
@@ -225,8 +312,21 @@ in
     quickshell
     awww
     wallpaper-set
+    theme-apply
     theme-set
   ];
+
+  home.activation.themeApplyCached =
+    lib.hm.dag.entryAfter
+      [
+        "writeBoundary"
+        "linkGeneration"
+        "dconfSettings"
+        "installPackages"
+      ]
+      ''
+        $DRY_RUN_CMD ${theme-apply}/bin/theme-apply --cached 2>/dev/null || true
+      '';
 
   home.file.".config/quickshell".source = ./config;
 }

@@ -26,15 +26,10 @@ PanelWindow {
     WlrLayershell.keyboardFocus: root.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell-island"
 
-    // La mascara sigue al contenido animado (topZone), no al booleano
-    // expanded: asi la region de input acompana al morph sin saltos.
     mask: Region {
         item: topZone
     }
 
-    // Foco diferido: el teclado Exclusive lo concede Hyprland de forma
-    // asíncrona y expandedLayer aún anima su fade, así que el
-    // forceActiveFocus síncrono se perdía y Esc no funcionaba sin click.
     property int focusAttempts: 0
     Timer {
         id: focusTimer
@@ -61,10 +56,6 @@ PanelWindow {
         }
     }
 
-    // Click fuera sobre una ventana: al enfocar otra app la isla se contrae.
-    // Se ignora null porque el foco Exclusive de la propia isla puede
-    // reportar activeToplevel null al expandir (evita auto-colapso).
-    // Los clicks sobre el escritorio vacío los atrapa IslandCatcher.
     property var expandedFrom: null
 
     Connections {
@@ -115,10 +106,6 @@ PanelWindow {
     readonly property bool expanded: IslandState.manualExpanded
     readonly property string currentView: IslandState.currentView
 
-    // Bindings reactivos: al referenciar las propiedades de Hyprland dentro
-    // del binding, QML se re-suscribe a sus señales. Antes checkFullscreen()
-    // y workspaceLabel() eran funciones puras llamadas una vez (sin
-    // dependencia reactiva) y nunca se actualizaban.
     readonly property var activeMonitor: Hyprland.monitorFor(root.screen)
     readonly property var activeWs: root.activeMonitor ? root.activeMonitor.activeWorkspace : null
     readonly property var wsToplevels: {
@@ -148,9 +135,6 @@ PanelWindow {
         }
     }
 
-    // Geometría del morph: la píldora central (80x26) crece al panel (548x266).
-    // El alto total 266 = 26 (header) + 8 (separador) + 232 (contenido),
-    // conserva la altura total anterior (26 + 8 + 232) para no mover exclusiveZone.
     readonly property int pillW: 80
     readonly property int pillH: 26
     readonly property int panelW: 548
@@ -176,10 +160,6 @@ PanelWindow {
         }
     }
 
-    // La ventana LayerShell NUNCA cambia de tamano: siempre mide lo del
-    // panel expandido. Antes saltaba de 144x26 a 612x266 en 1 frame y
-    // las regiones recien ampliadas se mostraban en negro varios frames
-    // (fotos 1.png/3.png). El morph lo anima solo el rectangulo interior.
     readonly property int fullW: root.panelW + (root.side + root.gap) * 2
     implicitWidth: root.fullW
     implicitHeight: root.panelH
@@ -199,8 +179,6 @@ PanelWindow {
         width: root.expanded ? (root.panelW + (root.side + root.gap) * 2) : (root.pillW + (root.side + root.gap) * 2)
         height: root.expanded ? root.panelH : root.pillH
 
-        // Respaldo de teclado: si el foco cae en un hijo en vez de islandBody,
-        // Esc sigue colapsando. Lo aceptado por islandBody no burbujea aquí.
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape && root.expanded) {
                 IslandState.collapse();
@@ -221,8 +199,6 @@ PanelWindow {
             }
         }
 
-        // Círculo lateral izquierdo: workspace. Queda en la esquina exterior,
-        // se desliza hacia fuera al crecer topZone pero siempre visible.
         Rectangle {
             id: wsCircle
             anchors.left: parent.left
@@ -250,7 +226,6 @@ PanelWindow {
             }
         }
 
-        // Círculo lateral derecho: power. Igual que workspace.
         Rectangle {
             id: powerCircle
             anchors.right: parent.right
@@ -292,8 +267,6 @@ PanelWindow {
             }
         }
 
-        // La píldora del medio SE TRANSFORMA en el panel extendido:
-        // mismo Rectangle, anima width 80->548, height 26->266, radius 13->16.
         Rectangle {
             id: islandBody
             anchors.top: parent.top
@@ -338,8 +311,6 @@ PanelWindow {
                 }
             }
 
-            // Click en zona compacta: expandir. En expandido el fondo bloquea
-            // clicks hacia fuera (el outsideClick de la ventana colapsa).
             MouseArea {
                 id: pillToggle
                 anchors.fill: parent
@@ -356,7 +327,6 @@ PanelWindow {
                 onClicked: mouse => mouse.accepted = true
             }
 
-            // Capa compacta: hora + indicadores. Crossfade + escala al expandir.
             Item {
                 id: compactLayer
                 anchors.top: parent.top
@@ -415,8 +385,6 @@ PanelWindow {
                 }
             }
 
-            // Capa expandida: header (misma franja de 26px de la píldora) +
-            // contenido 232px. Entra con fade + escala 0.95->1.
             Item {
                 id: expandedLayer
                 anchors.fill: parent
@@ -438,8 +406,6 @@ PanelWindow {
                     }
                 }
 
-                // Header: ocupa la franja de la píldora original, da continuidad.
-                // Click colapsa (la píldora "vuelve").
                 Item {
                     id: expandedHeader
                     anchors.top: parent.top
@@ -573,13 +539,6 @@ PanelWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
 
-                        // Vistas pesadas (timers, canvas, imágenes, Networking)
-                        // solo se instancian cuando están visibles. Antes las 5
-                        // vivían siempre: 1s Timer de música + 5s Timer de red
-                        // + 3 canvas repintando cada 2s aunque el panel
-                        // estuviera colapsado. Loader activo = LazyLoader de
-                        // la guía de Quickshell (carga diferida, ahorra memoria
-                        // y evita trabajo en background).
                         Loader {
                             anchors.fill: parent
                             anchors.margins: 14

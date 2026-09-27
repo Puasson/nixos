@@ -32,12 +32,6 @@
     gtk4.extraConfig = {
       gtk-application-prefer-dark-theme = true;
     };
-
-    gtk4.extraCss = ''
-      .nautilus-window {
-        background-color: #1e1e2e;
-      }
-    '';
   };
 
   dconf = {
@@ -58,8 +52,4 @@
       package = pkgs.adwaita-qt;
     };
   };
-
-  # Estado inicial oscuro. El cambio en runtime lo maneja `theme-set`
-  # (dconf + gsettings); no fijar GTK_THEME aqui porque pisaria el
-  # toggle para apps lanzadas via `uwsm app`.
 }

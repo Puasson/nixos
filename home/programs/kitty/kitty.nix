@@ -4,6 +4,11 @@
   programs.kitty = {
     enable = true;
     themeFile = "Catppuccin-Mocha";
+    autoThemeFiles = {
+      light = "Catppuccin-Latte";
+      dark = "Catppuccin-Mocha";
+      noPreference = "Catppuccin-Mocha";
+    };
     shellIntegration = {
       enableBashIntegration = true;
       mode = "no-cursor";

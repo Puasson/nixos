@@ -11,6 +11,16 @@
     defaultEditor = true;
     nixpkgs.source = inputs.nixpkgs;
 
+    extraConfigLuaPre = ''
+      do
+        local f = io.open(os.getenv("HOME") .. "/.cache/quickshell/theme/mode", "r")
+        local m = f and f:read("*l") or nil
+        if f then f:close() end
+        vim.o.background = (m == "light") and "light" or "dark"
+      end
+      vim.cmd("colorscheme catppuccin")
+    '';
+
     opts = {
       number = true;
       relativenumber = true;
@@ -46,7 +56,11 @@
     colorschemes.catppuccin = {
       enable = true;
       settings = {
-        flavour = "mocha";
+        flavour = "auto";
+        background = {
+          light = "latte";
+          dark = "mocha";
+        };
         transparent_background = true;
         float = {
           transparent = true;

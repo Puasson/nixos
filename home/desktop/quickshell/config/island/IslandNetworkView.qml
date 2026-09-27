@@ -187,8 +187,6 @@ Item {
     Timer {
         id: ipTimer
         interval: 5000
-        // La vista ahora se destruye al ocultarse (Loader), pero además
-        // se pausa si no es visible: evita `ip addr` en background.
         running: root.visible
         repeat: true
         onTriggered: {

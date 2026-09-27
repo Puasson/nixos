@@ -3,12 +3,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Registro central de temas: 8 familias x claro/oscuro.
-// API publica de colores intacta (bgDock, textPrimary, ...): los 13
-// archivos consumidores no cambian. Quickshell es la fuente de verdad
-// (modo manual): `theme-set` propaga al sistema GTK solo claro/oscuro.
-// Root Scope (no QtObject) para poder alojar los Process de restore,
-// igual que SysStats.
 Scope {
     id: root
 
@@ -52,6 +46,7 @@ Scope {
             return true;
         root.family = fam;
         root._persist();
+        root._queueSysSync();
         return true;
     }
 
@@ -69,6 +64,7 @@ Scope {
             return true;
         root.isDark = dark;
         root._persist();
+        root._queueSysSync();
         return true;
     }
 
@@ -83,7 +79,6 @@ Scope {
         return next;
     }
 
-    // Mini-preview para el ThemeMenu (sin cambiar el tema activo).
     function preview(fam, dark): var {
         var b = root._base(String(fam), dark ? true : false);
         return {
@@ -99,7 +94,21 @@ Scope {
         } catch (e) {}
     }
 
-    // Hex con alfa -> color (tintes por familia para bgDock/bgCard).
+    function _queueSysSync(): void {
+        sysSyncTimer.restart();
+    }
+
+    Timer {
+        id: sysSyncTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            try {
+                Quickshell.execDetached(["theme-apply", root.family, root.modeName()]);
+            } catch (e) {}
+        }
+    }
+
     function _a(hex, alpha): color {
         try {
             var h = String(hex).replace("#", "");
@@ -114,8 +123,6 @@ Scope {
         }
     }
 
-    // Tokens base por familia/modo: bg, side, thumb, text, main, muted,
-    // blue, green, yellow, red, violet.
     function _base(fam, dark): var {
         if (fam === "nord") {
             if (dark)
@@ -152,14 +159,12 @@ Scope {
                 return { bg: "#191724", side: "#11101a", thumb: "#1f1d2e", text: "#e0def4", main: "#e0def4", muted: "#6e6a86", blue: "#c4a7e7", green: "#9ccfd8", yellow: "#f6c177", red: "#eb6f92", violet: "#31748f" };
             return { bg: "#faf4ed", side: "#f2e9e1", thumb: "#fffaf3", text: "#575279", main: "#575279", muted: "#9893a5", blue: "#907aa9", green: "#56949f", yellow: "#ea9d34", red: "#b4637a", violet: "#286983" };
         }
-        // catppuccin
         if (dark)
             return { bg: "#1e1e2e", side: "#0a0a0d", thumb: "#11111b", text: "#cdd6f4", main: "#cdd6f4", muted: "#6c7086", blue: "#89b4fa", green: "#a6e3a1", yellow: "#f9e2af", red: "#f38ba8", violet: "#cba6f7" };
         return { bg: "#eff1f5", side: "#e6e9ef", thumb: "#e6e9ef", text: "#4c4f69", main: "#5c5f77", muted: "#9ca0b0", blue: "#1e66f5", green: "#40a02b", yellow: "#df8e1d", red: "#d20f39", violet: "#8839ef" };
     }
 
     function _resolve(fam, dark): var {
-        // Catppuccin oscuro: valores legacy exactos, sin regresion visual.
         if (fam === "catppuccin" && dark) {
             return {
                 bgDock: Qt.rgba(0.13, 0.13, 0.16, 0.85),
@@ -239,14 +244,10 @@ Scope {
     readonly property int animNormal: 220
     readonly property int animIsland: 280
     readonly property int animDock: 350
-    // Curvas fluidas 60fps: salida suave (OutExpo) para aparecer/expandir,
-    // entrada rápida (OutQuad) para ocultar. Evitar InCubic/InOut que se
-    // perciben entrecortadas. Usar en NumberAnimation/SmoothedAnimation.
     readonly property int easeOut: Easing.OutExpo
     readonly property int easeHide: Easing.OutQuad
     readonly property int easeMove: Easing.OutCubic
 
-    // Restaura la ultima seleccion persistida por theme-set / ThemeMenu.
     Process {
         id: familyProc
         command: ["cat", root.familyFile]

@@ -3,12 +3,6 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Monitoreo de sistema sin spawnear procesos.
-// Antes: 3x `cat /proc/...` vía Process cada 2s = 3 forks/2s + parse.
-// Ahora: 3x FileView (lectura async en hilos de Quickshell, sin fork)
-// + un solo Timer que recarga. Según docs de Quickshell, FileView está
-// pensado para archivos pequeños de texto y carga en background sin
-// bloquear el hilo de UI; Process+Timer por ventana se desaconseja.
 Scope {
     id: root
 
@@ -30,10 +24,6 @@ Scope {
     property var _prevRx: -1
     property var _prevTx: -1
 
-    // El polling sigue corriendo en background para mantener el historial
-    // lleno al abrir la isla, pero FileView.reload() es barato (sin fork).
-    // Si algún día se quiere pausar del todo: pollTimer.running = false
-    // desde fuera cuando la isla lleva mucho colapsada.
     property bool active: true
 
     function _push(prop, v): void {

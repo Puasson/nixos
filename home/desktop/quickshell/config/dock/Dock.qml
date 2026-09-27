@@ -7,14 +7,6 @@ import QtQuick.Layouts
 import "../theme"
 import "../launcher" as LauncherModule
 
-// Dock que SE TRANSFORMA en el lanzador (morph estilo isla dinámica):
-// Super+A (LauncherMenu toggle) expande la píldora al panel de búsqueda.
-// La fila de apps persiste abajo como franja de continuidad, igual que el
-// header de 26px de la isla.
-//
-// La ventana LayerShell NUNCA cambia de tamaño: siempre mide lo del panel
-// expandido (truco de Island.qml). El morph lo anima solo el rectángulo
-// interior, sin frames negros ni tearing.
 PanelWindow {
     id: root
 
@@ -50,9 +42,6 @@ PanelWindow {
     property int iconSize: 38
 
     property string screenName: root.screen ? root.screen.name : ""
-    // Conteo reactivo: al referenciar monitor/workspace/toplevels en el
-    // binding, QML se reevalúa con cada cambio. Antes era una llamada a
-    // función pura (workspaceWindowCount) sin dependencias y quedaba fijo.
     readonly property var activeMonitor: Hyprland.monitorFor(root.screen)
     readonly property var tlsArray: {
         try {
@@ -81,12 +70,9 @@ PanelWindow {
             return 0;
         }
     }
-    // Con el lanzador abierto el dock no se auto-oculta nunca.
     readonly property bool expanded: LauncherModule.LauncherState.isOpen
     readonly property bool shouldShow: root.expanded || DockState.shouldShow(root.screenName, root.windowCount)
     property bool reallyHidden: true
-    // Retardo antes de ocultar al salir el ratón (evita parpadeo al pasar
-    // entre dock y borde). Antes reutilizaba animDock como intervalo.
     readonly property int hideDelay: 350
 
     Timer {
@@ -99,9 +85,6 @@ PanelWindow {
         }
     }
 
-    // Foco diferido del buscador: el teclado Exclusive lo concede Hyprland de
-    // forma asíncrona y searchZone aún anima su fade (animFast 150ms), así que
-    // el forceActiveFocus síncrono se perdía y había que hacer click/hover.
     property int focusAttempts: 0
     Timer {
         id: focusTimer
@@ -196,8 +179,6 @@ PanelWindow {
         }
     }
 
-    // Apps fijadas: se declaran en DockApps.qml (una línea por desktopId).
-    // Todo lo demás (icono, nombre, match, lanzamiento) se deriva solo.
     property var pinned: DockApps.apps
 
     function lookupEntry(id) {
@@ -225,9 +206,6 @@ PanelWindow {
             Quickshell.execDetached(["uwsm", "app", "--", String(id)]);
     }
 
-    // "brave-origin" debe coincidir con appId "brave-browser", y
-    // "org.gnome.Nautilus" con "org.gnome.nautilus": comparación
-    // bidireccional + por tokens para no exigir el match exacto.
     function pinnedMatches(appIdLower, pinnedId) {
         var p = String(pinnedId).toLowerCase();
         if (p === "" || appIdLower === "")
@@ -246,11 +224,6 @@ PanelWindow {
         return root.tlsArray;
     }
 
-    // Cache de matches por app fijada: se calcula UNA vez por cambio de
-    // toplevels en vez de N veces (una por botón × una por propiedad
-    // running/active/click). Antes cada delegado llamaba a
-    // matchingToplevels() en cada binding => O(pinned × tls) en JS por
-    // cada actualización.
     readonly property var matchCache: {
         var c = {};
         try {
@@ -316,8 +289,6 @@ PanelWindow {
         return "Ventana";
     }
 
-    // La píldora SE TRANSFORMA en el panel del lanzador: mismo Rectangle,
-    // anima width/height con la curva de la isla (OutExpo 280ms).
     Rectangle {
         id: dockBox
         anchors.bottom: parent.bottom
@@ -327,9 +298,6 @@ PanelWindow {
         radius: Theme.radiusLarge
         color: Theme.bgDock
         clip: true
-        // Respaldo de teclado: si el foco cae fuera del TextInput (p. ej. tras
-        // un click en la lista), las flechas/Enter/Esc siguen funcionando. Los
-        // eventos aceptados por el TextInput no burbujean hasta aquí.
         focus: true
         Keys.onPressed: event => {
             if (!root.expanded)
@@ -366,9 +334,6 @@ PanelWindow {
             }
         }
 
-        // Zona de búsqueda: entra con fade + escala desde arriba (como
-        // expandedLayer de la isla). La fila del dock persiste abajo como
-        // franja de continuidad.
         Item {
             id: searchZone
             anchors.top: parent.top
@@ -494,8 +459,6 @@ PanelWindow {
                     color: Qt.rgba(1, 1, 1, 0.1)
                 }
 
-                // Botón lanzador: alterna el morph (equivale a Super+A).
-                // Queda resaltado en acento mientras el panel está abierto.
                 Item {
                     width: 52
                     height: 48

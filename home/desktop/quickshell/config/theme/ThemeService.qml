@@ -1,8 +1,6 @@
 import Quickshell
 import Quickshell.Io
 
-// Servicio IPC del tema, espejo de LauncherService/IslandService:
-// `qs ipc call Theme setFamily nord` / `setMode dark` / `toggleMode`.
 Scope {
     IpcHandler {
         target: "Theme"

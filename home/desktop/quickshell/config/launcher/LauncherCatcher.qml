@@ -2,10 +2,6 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 
-// Atrapa clicks fuera del panel expandido para colapsarlo. El dock ya no
-// usa overlay fullscreen, así que esta ventana lo sustituye: capa Bottom
-// (por encima de las apps, por debajo del dock en Top) con máscara total,
-// visible solo mientras el lanzador está abierto.
 PanelWindow {
     id: root
 

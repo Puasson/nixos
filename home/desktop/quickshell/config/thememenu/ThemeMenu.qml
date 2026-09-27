@@ -5,9 +5,6 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-// Menu de temas (SUPER+SHIFT+I): 8 familias x claro/oscuro.
-// El cambio se aplica en vivo al singleton Theme y se persiste;
-// `theme-set` lo propaga a GTK/wallpaper cuando se usa desde CLI.
 Scope {
     id: root
 
@@ -279,7 +276,7 @@ Scope {
                     Text {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: "Enter/click aplica · D oscuro · L claro · N siguiente · Esc cierra"
+                        text: "Aplica a shell y apps · D oscuro · L claro · N siguiente · Esc cierra"
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontTiny
                     }

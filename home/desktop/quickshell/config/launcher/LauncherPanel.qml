@@ -4,16 +4,10 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-// Contenido del lanzador sin ventana propia: vive dentro del dock
-// expandido, encima de la fila de apps (franja de continuidad, como el
-// header de la isla). El estado viene de LauncherState.
 ColumnLayout {
     id: root
     spacing: 8
 
-    // Expuesto al Dock para el reintento diferido: la layer Exclusive de
-    // Hyprland llega de forma asíncrona y el primer forceActiveFocus se
-    // pierde si la ventana aún no está activa.
     readonly property bool searchHasFocus: searchInput.activeFocus
     property int _focusAttempts: 0
 
@@ -24,8 +18,6 @@ ColumnLayout {
         focusRetry.restart();
     }
 
-    // Reintento interno: cubre el fade de searchZone (animFast 150ms) y el
-    // foco Exclusive que otorga el compositor unos frames después del toggle.
     Timer {
         id: focusRetry
         interval: 60
@@ -57,8 +49,6 @@ ColumnLayout {
             verticalAlignment: TextInput.AlignVCenter
             color: Theme.textPrimary
             selectionColor: Theme.accentBlue
-            // focus:true retiene el foco al reactivarse la ventana; el cursor
-            // solo se muestra con foco activo para no confundir.
             focus: true
             activeFocusOnTab: true
             cursorVisible: activeFocus

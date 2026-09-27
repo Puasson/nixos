@@ -2,8 +2,6 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// Estado del lanzador, espejo de IslandState: la vista (Dock.qml) y el
-// servicio IPC (LauncherService.qml) se coordinan a través de aquí.
 QtObject {
     id: root
 
@@ -41,8 +39,6 @@ QtObject {
         return String(a.name).localeCompare(String(b.name));
     })
 
-    // Tope de resultados: el Repeater solo instancia como máximo 60
-    // delegados con IconImage en cada keystroke.
     property var filtered: {
         var q = root.query.trim().toLowerCase();
         var apps = root.allApps;
@@ -61,8 +57,6 @@ QtObject {
         return out;
     }
 
-    // Vista recortada: con el panel colapsado el modelo se vacía y los
-    // delegados se destruyen (sin IconImages en memoria en idle).
     property var visibleResults: {
         if (!root.isOpen)
             return [];

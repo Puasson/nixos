@@ -1,10 +1,3 @@
--- Reglas de capa para la shell Quickshell.
--- Las animaciones las dirige QML (morph de la isla, show/hide del dock);
--- si el compositor tambien anima la layer (p. ej. animate_manual_resizes
--- ante un resize brusco, o fade al mapear), aparecen restos negros y
--- tearing durante la expansion. Por eso se desactiva la animacion del
--- compositor en todas las layers de la shell.
--- Los namespaces se definen en cada PanelWindow (WlrLayershell.namespace).
 hl.layer_rule({ name = "qs-noanim-island", match = { namespace = "^quickshell-island$" }, no_anim = true })
 hl.layer_rule({ name = "qs-noanim-island-catcher", match = { namespace = "^quickshell-island-catcher$" }, no_anim = true })
 hl.layer_rule({ name = "qs-noanim-dock", match = { namespace = "^quickshell-dock$" }, no_anim = true })

@@ -39,5 +39,9 @@
     obs-studio
     qbittorrent
     inkscape
+    wayscriber
+    drawio
+    spotify
+    zed-editor
   ];
 }

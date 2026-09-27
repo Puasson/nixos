@@ -2,7 +2,6 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// Estado del menu de temas, espejo de LauncherState/PowerState.
 QtObject {
     id: root
 

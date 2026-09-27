@@ -13,9 +13,7 @@ Scope {
     property int selected: 0
     property var wallpapers: []
     property string currentPath: ""
-    // Hold de flechas: -1 izq, +1 der, 0 suelto. Bucle infinito con wrap.
     property int holdDir: 0
-    // Salto de bucle (ultimo->primero): un frame sin animacion para no animar toda la cinta.
     property bool instantJump: false
 
     readonly property string wallDir: "/home/sora/Pictures/Wallpaper"
@@ -43,7 +41,6 @@ Scope {
             root.open();
     }
     function cancel(): void {
-        // Solo al aplicar: cancelar solo cierra, sin restaurar preview.
         root.close();
     }
     function applySelected(): void {
@@ -70,7 +67,6 @@ Scope {
             return;
         var n = root.wallpapers.length;
         var next = (root.selected + delta + n) % n;
-        // Wrap ultimo<->primero: marcar salto instantaneo para no animar toda la cinta.
         var wrapped = (delta > 0 && next < root.selected) || (delta < 0 && next > root.selected);
         root.instantJump = wrapped;
         root.selected = next;
@@ -82,9 +78,6 @@ Scope {
             || l.endsWith(".webp") || l.endsWith(".gif");
     }
 
-    // Avance constante al mantener pulsado: holdTimer es el unico motor
-    // (se ignoran los auto-repeat del SO). holdDelay da el retardo inicial
-    // para que un toque corto sea exactamente 1 paso.
     Timer {
         id: holdDelay
         interval: 350
@@ -215,7 +208,6 @@ Scope {
 
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Left) {
-                            // El auto-repeat del SO no avanza: holdTimer es el unico motor.
                             if (event.isAutoRepeat) {
                                 event.accepted = true;
                                 return;
@@ -243,7 +235,6 @@ Scope {
                             root.applyRandom();
                             event.accepted = true;
                         }
-                        // Up/Down ignorados a proposito: cinta horizontal solo ←/→.
                     }
 
                     Keys.onReleased: event => {
@@ -317,25 +308,15 @@ Scope {
                         spacing: -34
                         model: root.wallpapers
                         boundsBehavior: Flickable.StopAtBounds
-                        // Drag sin funcion (acordado): ni mouse ni touch desplazan.
                         interactive: false
-                        // Solo ←/→ via card.Keys: evita doble manejo nativo.
                         keyNavigationEnabled: false
                         focus: false
                         currentIndex: root.selected
                         highlightRangeMode: ListView.StrictlyEnforceRange
                         preferredHighlightBegin: width / 2 - 100
                         preferredHighlightEnd: width / 2 + 100
-                        // Hold templado (~7/s): animacion corta < intervalo 140ms para no encolar.
-                        // Bucle: 1ms en el salto ultimo<->primero para no cruzar toda la cinta.
                         highlightMoveDuration: root.instantJump ? 1 : (holdTimer.running ? 100 : Theme.animNormal)
                         highlightMoveVelocity: holdTimer.running ? 2000 : 1200
-                        // Sin Behavior extra en contentX: StrictlyEnforceRange
-                        // + highlight ya suavizan el centrado. Un
-                        // SmoothedAnimation adicional luchaba contra el
-                        // highlight (doble animador sobre contentX = tirones).
-
-                        // Rueda mueve cinta (acordado): paso simple por evento.
                         WheelHandler {
                             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                             orientation: Qt.Vertical
@@ -363,8 +344,6 @@ Scope {
                                     root.instantJump = false;
                                     return;
                                 }
-                                // En hold, StrictlyEnforceRange ya sigue solo; recentrar
-                                // manual solo entorpece (tirones). Solo para pasos aislados.
                                 if (!holdTimer.running)
                                     centerTimer.restart();
                             }
@@ -443,7 +422,6 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: {
-                                    // Hover no roba durante hold de flechas.
                                     if (root.holdDir !== 0)
                                         return;
                                     if (root.selected !== index)

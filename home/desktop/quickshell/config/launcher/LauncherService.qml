@@ -1,8 +1,6 @@
 import Quickshell
 import Quickshell.Io
 
-// Servicio IPC del lanzador, espejo de IslandService: Super+A
-// (keybindings.lua) invoca "qs ipc call LauncherMenu toggle".
 Scope {
     IpcHandler {
         target: "LauncherMenu"
