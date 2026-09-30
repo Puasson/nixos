@@ -117,6 +117,7 @@
     udiskie
     tree
     git
+    home-manager
     adw-gtk3
     vimix-cursors
     polkit_gnome

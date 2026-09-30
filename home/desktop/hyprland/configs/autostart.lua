@@ -1,9 +1,14 @@
 hl.on("hyprland.start", function()
+	-- Convergencia de tema al login: aplica familia/modo guardados a
+	-- GTK/dconf antes de que abran las apps (quickshell restaura solo
+	-- su propio estado visual y no toca el sistema).
+	hl.exec_cmd("uwsm app -- theme-apply --cached")
 	hl.exec_cmd("uwsm app -- nm-applet --indicator")
 	hl.exec_cmd("uwsm app -- polkit-gnome-authentication-agent-1")
 	hl.exec_cmd("uwsm app -- udiskie --tray")
 	hl.exec_cmd("uwsm app -- quickshell")
 	hl.exec_cmd("uwsm app -- hypridle")
+	hl.exec_cmd("uwsm app -- wayscriber --daemon")
 	hl.exec_cmd("uwsm app -- wallpaper-set --restore")
 end)
 

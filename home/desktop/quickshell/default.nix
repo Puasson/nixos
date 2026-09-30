@@ -105,8 +105,15 @@ let
 
       upsert_ini() {
         local file="$1" key="$2" value="$3"
+        # Los settings.ini los gestiona Home Manager como symlinks al store
+        # (solo lectura, siempre con los defaults oscuros). Para que el modo
+        # claro llegue a las apps GTK, se reemplaza el symlink por una copia
+        # regular en $HOME (el store queda intacto; en el proximo hms HM
+        # recrea el symlink y themeApplyCached lo vuelve a converger).
         if [ -L "$file" ]; then
-          return 0
+          target="$(readlink -f "$file")" || return 0
+          [ -f "$target" ] || return 0
+          cp --remove-destination "$target" "$file" || return 0
         fi
         mkdir -p "$(dirname "$file")" || true
         if [ -e "$file" ] && [ ! -w "$file" ]; then
@@ -190,7 +197,7 @@ let
       theme-apply
     ];
     text = ''
-      FAMILIES="catppuccin nord gruvbox tokyonight dracula everforest kanagawa rosepine"
+      FAMILIES="abyss-blue forest-green violet-haze holst-red holst-amber mono sakura"
       CACHE_DIR="$HOME/.cache/quickshell/theme"
       FAMILY_FILE="$CACHE_DIR/family"
       MODE_FILE="$CACHE_DIR/mode"
@@ -200,7 +207,7 @@ let
         if [ -f "$FAMILY_FILE" ]; then
           cat "$FAMILY_FILE"
         else
-          printf 'catppuccin'
+          printf 'abyss-blue'
         fi
       }
 

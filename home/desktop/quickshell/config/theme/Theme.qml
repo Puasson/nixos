@@ -6,19 +6,18 @@ import QtQuick
 Scope {
     id: root
 
-    property string family: "catppuccin"
+    property string family: "abyss-blue"
     property bool isDark: true
 
-    readonly property var families: ["catppuccin", "nord", "gruvbox", "tokyonight", "dracula", "everforest", "kanagawa", "rosepine"]
+    readonly property var families: ["abyss-blue", "forest-green", "violet-haze", "holst-red", "holst-amber", "mono", "sakura"]
     readonly property var familyLabels: ({
-        catppuccin: "Catppuccin",
-        nord: "Nord",
-        gruvbox: "Gruvbox",
-        tokyonight: "Tokyo Night",
-        dracula: "Dracula",
-        everforest: "Everforest",
-        kanagawa: "Kanagawa",
-        rosepine: "Rosé Pine"
+        "abyss-blue": "Abyss Blue",
+        "forest-green": "Forest Green",
+        "violet-haze": "Violet Haze",
+        "holst-red": "Holst Red",
+        "holst-amber": "Holst Amber",
+        mono: "Mono",
+        sakura: "Sakura"
     })
 
     readonly property string cacheDir: "/home/sora/.cache/quickshell/theme"
@@ -124,69 +123,48 @@ Scope {
     }
 
     function _base(fam, dark): var {
-        if (fam === "nord") {
+        if (fam === "abyss-blue") {
             if (dark)
-                return { bg: "#2e3440", side: "#232830", thumb: "#3b4252", text: "#eceff4", main: "#e5e9f0", muted: "#7e8aa0", blue: "#88c0d0", green: "#a3be8c", yellow: "#ebcb8b", red: "#bf616a", violet: "#b48ead" };
-            return { bg: "#eceff4", side: "#e5e9f0", thumb: "#e5e9f0", text: "#2e3440", main: "#3b4252", muted: "#616e88", blue: "#5e81ac", green: "#7a9a6d", yellow: "#b48a3c", red: "#b3535f", violet: "#8a6fae" };
+                return { bg: "#021024", side: "#010913", thumb: "#052659", text: "#C1E8FF", main: "#7DA0CA", muted: "#5E84AD", blue: "#7DA0CA", green: "#5483B3", yellow: "#C1E8FF", red: "#4A7BA8", violet: "#9ABEDD" };
+            return { bg: "#C1E8FF", side: "#A9CCE8", thumb: "#A9CCE8", text: "#021024", main: "#052659", muted: "#4E6E96", blue: "#16406E", green: "#2F5D8A", yellow: "#5B7FA6", red: "#0B2F57", violet: "#3E6E9E" };
         }
-        if (fam === "gruvbox") {
+        if (fam === "forest-green") {
             if (dark)
-                return { bg: "#282828", side: "#1d2021", thumb: "#3c3836", text: "#fbf1c7", main: "#ebdbb2", muted: "#928374", blue: "#83a598", green: "#b8bb26", yellow: "#fabd2f", red: "#fb4934", violet: "#d3869b" };
-            return { bg: "#fbf1c7", side: "#ebdbb2", thumb: "#ebdbb2", text: "#3c3836", main: "#504945", muted: "#928374", blue: "#076678", green: "#79740e", yellow: "#b57614", red: "#9d0006", violet: "#8f3f71" };
+                return { bg: "#051F20", side: "#020E0F", thumb: "#0B2B26", text: "#DAF1DE", main: "#BEB69B", muted: "#7BA493", blue: "#9DC4B0", green: "#BEB69B", yellow: "#DAF1DE", red: "#5E8A7A", violet: "#8AB5A3" };
+            return { bg: "#DAF1DE", side: "#C2DCC7", thumb: "#C2DCC7", text: "#051F20", main: "#0B2B26", muted: "#4E7367", blue: "#163832", green: "#235347", yellow: "#4A7A62", red: "#0B2B26", violet: "#386153" };
         }
-        if (fam === "tokyonight") {
+        if (fam === "violet-haze") {
             if (dark)
-                return { bg: "#1a1b26", side: "#16161e", thumb: "#24283b", text: "#c0caf5", main: "#a9b1d6", muted: "#565f89", blue: "#7aa2f7", green: "#9ece6a", yellow: "#e0af68", red: "#f7768e", violet: "#bb9af7" };
-            return { bg: "#e1e2e7", side: "#d5d6db", thumb: "#d5d6db", text: "#343b58", main: "#414868", muted: "#6f7392", blue: "#2e7de9", green: "#587539", yellow: "#8c6c3e", red: "#f52a65", violet: "#7048b6" };
+                return { bg: "#49225B", side: "#2A1237", thumb: "#6E3482", text: "#F5EBFA", main: "#E7DBEF", muted: "#B48AC9", blue: "#A56ABD", green: "#C49BD8", yellow: "#F5EBFA", red: "#8A4FA3", violet: "#D0B3E3" };
+            return { bg: "#F5EBFA", side: "#E7DBEF", thumb: "#E7DBEF", text: "#2A1237", main: "#49225B", muted: "#7E5A94", blue: "#49225B", green: "#6E3482", yellow: "#8A68A8", red: "#331640", violet: "#7A4E94" };
         }
-        if (fam === "dracula") {
+        if (fam === "holst-red") {
             if (dark)
-                return { bg: "#282a36", side: "#21222c", thumb: "#44475a", text: "#f8f8f2", main: "#e8e8f0", muted: "#6272a4", blue: "#8be9fd", green: "#50fa7b", yellow: "#f1fa8c", red: "#ff5555", violet: "#bd93f9" };
-            return { bg: "#f8f8f2", side: "#e9e9f2", thumb: "#e9e9f2", text: "#282a36", main: "#44475a", muted: "#6272a4", blue: "#0087bd", green: "#159a4c", yellow: "#7a6d00", red: "#d9374b", violet: "#7158d6" };
+                return { bg: "#4B0F1E", side: "#24060E", thumb: "#6D1D32", text: "#F7D6DC", main: "#E07A94", muted: "#C06A80", blue: "#E07A94", green: "#CC5671", yellow: "#F7D6DC", red: "#B23C59", violet: "#D98AA0" };
+            return { bg: "#F7D6DC", side: "#EAC0C7", thumb: "#EAC0C7", text: "#2E0812", main: "#4B0F1E", muted: "#8A5560", blue: "#4B0F1E", green: "#6D1D32", yellow: "#8E4A5A", red: "#2E0812", violet: "#8E2B44" };
         }
-        if (fam === "everforest") {
+        if (fam === "holst-amber") {
             if (dark)
-                return { bg: "#2d353b", side: "#232a2f", thumb: "#3d484d", text: "#d3c6aa", main: "#c9bd9f", muted: "#7a8478", blue: "#7fbbb3", green: "#a7c080", yellow: "#dbbc7f", red: "#e67e80", violet: "#d699b6" };
-            return { bg: "#efead4", side: "#e6dfc6", thumb: "#e6dfc6", text: "#5c6a72", main: "#5c6a72", muted: "#939f91", blue: "#3a94c5", green: "#8da101", yellow: "#dfa000", red: "#f85552", violet: "#df69ba" };
+                return { bg: "#2A2206", side: "#1A1504", thumb: "#5A4A0D", text: "#FFF3D8", main: "#F3D789", muted: "#D0A94E", blue: "#F3D789", green: "#E8B84A", yellow: "#FFF3D8", red: "#CC961F", violet: "#DDBB6A" };
+            return { bg: "#FFF3D8", side: "#F0DC9F", thumb: "#F0DC9F", text: "#2A2206", main: "#5A4A0D", muted: "#8A6E22", blue: "#5A4A0D", green: "#7A5E12", yellow: "#8A6E22", red: "#2A2206", violet: "#A67917" };
         }
-        if (fam === "kanagawa") {
+        if (fam === "mono") {
             if (dark)
-                return { bg: "#1f1f28", side: "#181820", thumb: "#2a2a37", text: "#dcd7ba", main: "#c8c093", muted: "#727169", blue: "#7fb4ca", green: "#98bb6c", yellow: "#e6c384", red: "#e46876", violet: "#957fb8" };
-            return { bg: "#f2ecbc", side: "#e7dba0", thumb: "#e7dba0", text: "#545464", main: "#545464", muted: "#837173", blue: "#2574a0", green: "#6f8700", yellow: "#a0712c", red: "#c84053", violet: "#5a4a78" };
+                return { bg: "#06151E", side: "#02090D", thumb: "#2A3438", text: "#FFFFFF", main: "#D6D6D6", muted: "#898A8C", blue: "#D6D6D6", green: "#9AA0A2", yellow: "#FFFFFF", red: "#7E8587", violet: "#B8BDC0" };
+            return { bg: "#FFFFFF", side: "#D6D6D6", thumb: "#D6D6D6", text: "#06151E", main: "#2A3438", muted: "#6E7375", blue: "#06151E", green: "#2E383C", yellow: "#545A5B", red: "#1A2A33", violet: "#3E4A50" };
         }
-        if (fam === "rosepine") {
+        if (fam === "sakura") {
             if (dark)
-                return { bg: "#191724", side: "#11101a", thumb: "#1f1d2e", text: "#e0def4", main: "#e0def4", muted: "#6e6a86", blue: "#c4a7e7", green: "#9ccfd8", yellow: "#f6c177", red: "#eb6f92", violet: "#31748f" };
-            return { bg: "#faf4ed", side: "#f2e9e1", thumb: "#fffaf3", text: "#575279", main: "#575279", muted: "#9893a5", blue: "#907aa9", green: "#56949f", yellow: "#ea9d34", red: "#b4637a", violet: "#286983" };
+                return { bg: "#240B0E", side: "#150608", thumb: "#4A222B", text: "#FFDADD", main: "#FAA3AF", muted: "#B07A86", blue: "#C9CCEC", green: "#FAA3AF", yellow: "#FFDADD", red: "#E07A94", violet: "#C48A99" };
+            return { bg: "#FFDADD", side: "#EFC2C8", thumb: "#EFC2C8", text: "#240B0E", main: "#5A2E38", muted: "#8A6470", blue: "#4A5A9E", green: "#7F4D5E", yellow: "#A86A78", red: "#5A1A26", violet: "#8A4E62" };
         }
+        // Fallback: abyss-blue dark (nunca deberia alcanzarse, families valida antes)
         if (dark)
-            return { bg: "#1e1e2e", side: "#0a0a0d", thumb: "#11111b", text: "#cdd6f4", main: "#cdd6f4", muted: "#6c7086", blue: "#89b4fa", green: "#a6e3a1", yellow: "#f9e2af", red: "#f38ba8", violet: "#cba6f7" };
-        return { bg: "#eff1f5", side: "#e6e9ef", thumb: "#e6e9ef", text: "#4c4f69", main: "#5c5f77", muted: "#9ca0b0", blue: "#1e66f5", green: "#40a02b", yellow: "#df8e1d", red: "#d20f39", violet: "#8839ef" };
+            return { bg: "#021024", side: "#010913", thumb: "#052659", text: "#C1E8FF", main: "#7DA0CA", muted: "#5E84AD", blue: "#7DA0CA", green: "#5483B3", yellow: "#C1E8FF", red: "#4A7BA8", violet: "#9ABEDD" };
+        return { bg: "#C1E8FF", side: "#A9CCE8", thumb: "#A9CCE8", text: "#021024", main: "#052659", muted: "#4E6E96", blue: "#16406E", green: "#2F5D8A", yellow: "#5B7FA6", red: "#0B2F57", violet: "#3E6E9E" };
     }
 
     function _resolve(fam, dark): var {
-        if (fam === "catppuccin" && dark) {
-            return {
-                bgDock: Qt.rgba(0.13, 0.13, 0.16, 0.85),
-                bgCard: Qt.rgba(0.13, 0.13, 0.16, 0.92),
-                bgField: Qt.rgba(1, 1, 1, 0.07),
-                bgSelected: Qt.rgba(1, 1, 1, 0.12),
-                bgHover: Qt.rgba(1, 1, 1, 0.16),
-                overlayDim: Qt.rgba(0.02, 0.03, 0.08, 0.55),
-                thumbBg: "#11111b",
-                textPrimary: "white",
-                textMain: "#cdd6f4",
-                textMuted: "#6c7086",
-                accentBlue: "#89b4fa",
-                accentGreen: "#a6e3a1",
-                accentYellow: "#f9e2af",
-                badgeRed: "#f38ba8",
-                islandSide: "#0a0a0d",
-                graphCpu: "#f38ba8",
-                graphMem: "#cba6f7",
-                graphNet: "#89b4fa"
-            };
-        }
         var p = root._base(fam, dark);
         return {
             bgDock: root._a(p.bg, dark ? 0.85 : 0.88),
@@ -248,6 +226,21 @@ Scope {
     readonly property int easeHide: Easing.OutQuad
     readonly property int easeMove: Easing.OutCubic
 
+    // Restore de la ultima seleccion (theme-set / ThemeMenu): al completar
+    // ambos ficheros se hace UN sync al sistema via _queueSysSync, para que
+    // las apps converjan tambien al reiniciar el shell. Sin loop:
+    // theme-apply no toca family/mode.
+    property bool _famDone: false
+    property bool _modeDone: false
+    property bool _restoreSynced: false
+
+    function _maybeRestoreSync(): void {
+        if (root._restoreSynced || !root._famDone || !root._modeDone)
+            return;
+        root._restoreSynced = true;
+        root._queueSysSync();
+    }
+
     Process {
         id: familyProc
         command: ["cat", root.familyFile]
@@ -256,6 +249,8 @@ Scope {
                 var v = String(this.text || "").replace(/\r?\n$/, "").trim();
                 if (v !== "" && root.isValidFamily(v))
                     root.family = v;
+                root._famDone = true;
+                root._maybeRestoreSync();
             }
         }
     }
@@ -268,7 +263,23 @@ Scope {
                 var v = String(this.text || "").replace(/\r?\n$/, "").trim();
                 if (v === "dark" || v === "light")
                     root.isDark = (v === "dark");
+                root._modeDone = true;
+                root._maybeRestoreSync();
             }
+        }
+    }
+
+    // Respaldo: si algun restore no dispara onStreamFinished, converger
+    // igual una vez (no-op si _maybeRestoreSync ya corrio).
+    Timer {
+        id: restoreFallback
+        interval: 3000
+        repeat: false
+        running: true
+        onTriggered: {
+            root._famDone = true;
+            root._modeDone = true;
+            root._maybeRestoreSync();
         }
     }
 

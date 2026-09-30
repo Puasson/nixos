@@ -9,7 +9,7 @@ import "../theme"
 Scope {
     id: root
 
-    property bool isOpen: false
+    readonly property bool isOpen: StyleMenuState.isOpen
     property int selected: 0
     property var wallpapers: []
     property string currentPath: ""
@@ -24,7 +24,7 @@ Scope {
         holdTimer.stop();
         root.holdDir = 0;
         root.instantJump = false;
-        root.isOpen = true;
+        StyleMenuState.open();
         listProc.running = true;
         currentProc.running = true;
     }
@@ -32,7 +32,7 @@ Scope {
         holdDelay.stop();
         holdTimer.stop();
         root.holdDir = 0;
-        root.isOpen = false;
+        StyleMenuState.close();
     }
     function toggle(): void {
         if (root.isOpen)
@@ -42,6 +42,12 @@ Scope {
     }
     function cancel(): void {
         root.close();
+    }
+    function pick(fam): void {
+        Theme.setFamily(String(fam));
+    }
+    function toggleDark(): void {
+        Theme.toggleMode();
     }
     function applySelected(): void {
         holdDelay.stop();
@@ -56,11 +62,25 @@ Scope {
         Quickshell.execDetached(["wallpaper-set", "--persist", item.path]);
         root.close();
     }
-    function applyRandom(): void {
+    // R: aleatoriza tema + wallpaper (cierra al aplicar, como applySelected)
+    function randomizeAll(): void {
+        var fams = Theme.families;
+        if (fams.length > 0) {
+            var rf = String(fams[Math.floor(Math.random() * fams.length)]);
+            Theme.setFamily(rf);
+        }
         if (root.wallpapers.length === 0)
             return;
+        holdDelay.stop();
+        holdTimer.stop();
+        root.holdDir = 0;
         root.selected = Math.floor(Math.random() * root.wallpapers.length);
-        root.applySelected();
+        var item = root.wallpapers[root.selected];
+        if (!item)
+            return;
+        root.currentPath = item.path;
+        Quickshell.execDetached(["wallpaper-set", "--persist", item.path]);
+        root.close();
     }
     function move(delta): void {
         if (root.wallpapers.length === 0)
@@ -142,6 +162,35 @@ Scope {
     }
 
     IpcHandler {
+        target: "StyleMenu"
+
+        function toggle(): void {
+            root.toggle();
+        }
+        function open(): void {
+            root.open();
+        }
+        function close(): void {
+            root.close();
+        }
+    }
+
+    // Alias: SUPER+C anterior (ThemeMenu) y SUPER+I anterior (WallpaperMenu)
+    IpcHandler {
+        target: "ThemeMenu"
+
+        function toggle(): void {
+            root.toggle();
+        }
+        function open(): void {
+            root.open();
+        }
+        function close(): void {
+            root.close();
+        }
+    }
+
+    IpcHandler {
         target: "WallpaperMenu"
 
         function toggle(): void {
@@ -177,7 +226,7 @@ Scope {
             color: Theme.overlayDim
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-            WlrLayershell.namespace: "quickshell-wallpaper"
+            WlrLayershell.namespace: "quickshell-stylemenu"
 
             onVisibleChanged: {
                 if (visible)
@@ -232,7 +281,18 @@ Scope {
                             root.cancel();
                             event.accepted = true;
                         } else if (event.key === Qt.Key_R) {
-                            root.applyRandom();
+                            root.randomizeAll();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_D) {
+                            root.toggleDark();
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_N) {
+                            Theme.nextFamily();
+                            event.accepted = true;
+                        } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_7) {
+                            var idx = event.key - Qt.Key_1;
+                            if (idx < Theme.families.length)
+                                root.pick(Theme.families[idx]);
                             event.accepted = true;
                         }
                     }
@@ -251,6 +311,167 @@ Scope {
                         }
                     }
 
+                    // ---- Fila superior: Color Theme + Aleatorio + Dark Mode (theme.png) ----
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        spacing: 28
+
+                        ColumnLayout {
+                            spacing: 4
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "Color Theme"
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+
+                            Row {
+                                Layout.alignment: Qt.AlignHCenter
+                                spacing: 8
+
+                                Repeater {
+                                    model: Theme.families
+
+                                    Rectangle {
+                                        required property var modelData
+                                        required property int index
+
+                                        property string fam: String(modelData)
+                                        property bool active: fam === Theme.family
+                                        property var prev: Theme.preview(fam, Theme.isDark)
+
+                                        width: 64
+                                        height: 30
+                                        radius: 15
+                                        color: prev.accent
+                                        border.color: active ? Theme.accentBlue : Theme.textMuted
+                                        border.width: active ? 3 : 1
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.pick(parent.fam)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: Theme.familyLabel(Theme.family)
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 4
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "Aleatorio"
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+
+                            Rectangle {
+                                Layout.alignment: Qt.AlignHCenter
+                                width: 38
+                                height: 38
+                                radius: 19
+                                color: randomHover.containsMouse ? Theme.bgHover : Theme.bgField
+                                border.color: Theme.textMuted
+                                border.width: 1
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "R"
+                                    color: Theme.textPrimary
+                                    font.pixelSize: Theme.fontMain
+                                    font.bold: true
+                                }
+                                MouseArea {
+                                    id: randomHover
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.randomizeAll()
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "tema + fondo"
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 4
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "Dark Mode"
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+
+                            Rectangle {
+                                Layout.alignment: Qt.AlignHCenter
+                                width: 88
+                                height: 34
+                                radius: 17
+                                color: Theme.bgField
+                                border.color: Theme.textMuted
+                                border.width: 1
+
+                                Rectangle {
+                                    width: 26
+                                    height: 26
+                                    radius: 13
+                                    color: Theme.textPrimary
+                                    border.color: Theme.textMuted
+                                    border.width: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: Theme.isDark ? 4 : parent.width - 30
+
+                                    Behavior on x {
+                                        NumberAnimation {
+                                            duration: Theme.animFast
+                                            easing.type: Theme.easeOut
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    anchors.horizontalCenterOffset: Theme.isDark ? 12 : -12
+                                    text: Theme.isDark ? "ON" : "OFF"
+                                    color: Theme.textPrimary
+                                    font.pixelSize: Theme.fontSmall
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.toggleDark()
+                                }
+                            }
+
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: Theme.isDark ? "oscuro" : "claro"
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontTiny
+                            }
+                        }
+                    }
+
                     RowLayout {
                         Layout.fillWidth: true
 
@@ -264,29 +485,6 @@ Scope {
                             text: root.wallpapers.length > 0 ? ("  " + (root.selected + 1) + " / " + root.wallpapers.length) : ""
                             color: Theme.textMuted
                             font.pixelSize: Theme.fontSmall
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                        Rectangle {
-                            Layout.preferredWidth: 130
-                            Layout.preferredHeight: 32
-                            radius: Theme.radiusButton
-                            color: randomHover.containsMouse ? Theme.bgHover : Theme.bgField
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Aleatorio (R)"
-                                color: Theme.textPrimary
-                                font.pixelSize: Theme.fontSmall
-                            }
-                            MouseArea {
-                                id: randomHover
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.applyRandom()
-                            }
                         }
                     }
 
@@ -441,7 +639,7 @@ Scope {
                     Text {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: "←/→ navegar · hover resalta · Enter/click aplica · R aleatorio · Esc cancela"
+                        text: "←/→ navegar · 1-7 tema · Enter/click aplica fondo · R aleatorio · D oscuro/claro · N siguiente · Esc cierra"
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontTiny
                     }

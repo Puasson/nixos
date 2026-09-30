@@ -5,8 +5,7 @@ import "island" as IslandModule
 import "launcher" as LauncherModule
 import "powermenu" as PowerMenuModule
 import "theme" as ThemeModule
-import "thememenu" as ThemeMenuModule
-import "wallpaper" as WallpaperModule
+import "stylemenu" as StyleMenuModule
 
 ShellRoot {
     Variants {
@@ -66,9 +65,6 @@ ShellRoot {
     ThemeModule.ThemeService {
     }
 
-    ThemeMenuModule.ThemeMenu {
-    }
-
-    WallpaperModule.Wallpaper {
+    StyleMenuModule.StyleMenu {
     }
 }

@@ -4,4 +4,4 @@ hl.layer_rule({ name = "qs-noanim-dock", match = { namespace = "^quickshell-dock
 hl.layer_rule({ name = "qs-noanim-dock-trigger", match = { namespace = "^quickshell-dock-trigger$" }, no_anim = true })
 hl.layer_rule({ name = "qs-noanim-dock-catcher", match = { namespace = "^quickshell-dock-catcher$" }, no_anim = true })
 hl.layer_rule({ name = "qs-noanim-powermenu", match = { namespace = "^quickshell-powermenu$" }, no_anim = true })
-hl.layer_rule({ name = "qs-noanim-wallpaper", match = { namespace = "^quickshell-wallpaper$" }, no_anim = true })
+hl.layer_rule({ name = "qs-noanim-stylemenu", match = { namespace = "^quickshell-stylemenu$" }, no_anim = true })

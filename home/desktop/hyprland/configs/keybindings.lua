@@ -7,9 +7,9 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("uwsm app -- brave-origin"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("uwsm app -- zeditor"))
 hl.bind(mainMod .. " + O", hl.dsp.exec_cmd("uwsm app -- obsidian"))
-hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs ipc call ThemeMenu toggle"))
+hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("qs ipc call StyleMenu toggle"))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs ipc call LauncherMenu toggle"))
-hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("qs ipc call WallpaperMenu toggle"))
+hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("qs ipc call StyleMenu toggle"))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("qs ipc call Island toggle"))
 
 hl.bind("ALT + Q", hl.dsp.window.close())
@@ -96,3 +96,9 @@ hl.bind("XF86Tools", hl.dsp.exec_cmd("uwsm app -- tauon"), { locked = true })
 
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("qs ipc call PowerMenu toggle"))
 hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd("theme-set --toggle"))
+
+-- Wayscriber: un solo toggle global (duplicarlo lo anula). F6 entra a
+-- light-passthrough dentro del overlay pero no siempre saca; usar el bind
+-- global para salir cuando el overlay ya no recibe teclas.
+hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("uwsm app -- wayscriber --daemon-toggle"))
+hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd("wayscriber --light-toggle"))

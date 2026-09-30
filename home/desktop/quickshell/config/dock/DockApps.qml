@@ -10,6 +10,6 @@ QtObject {
         "org.gnome.Nautilus",
         "obsidian",
         "gimp",
-        "papers"
+        "spotify"
     ]
 }
