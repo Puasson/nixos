@@ -4,7 +4,7 @@
   imports = [
     ./programs/kitty/kitty.nix
     ./programs/fastfetch/fastfetch.nix
-    ./programs/nixvim/nixvim.nix
+    ./programs/nixvim/default.nix
     ./programs/opencode/opencode.nix
     ./programs/ssh/ssh.nix
     ./programs/mpv/mpv.nix
@@ -46,8 +46,8 @@
     zed-editor
     gnome-calculator
     morgen
-    keepass
     thunderbird
     telegram-desktop
+    keepassxc
   ];
 }

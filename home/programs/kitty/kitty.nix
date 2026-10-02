@@ -3,12 +3,6 @@
 {
   programs.kitty = {
     enable = true;
-    themeFile = "Catppuccin-Mocha";
-    autoThemeFiles = {
-      light = "Catppuccin-Latte";
-      dark = "Catppuccin-Mocha";
-      noPreference = "Catppuccin-Mocha";
-    };
     shellIntegration = {
       enableBashIntegration = true;
       mode = "no-cursor";
@@ -20,21 +14,21 @@
     };
 
     settings = {
+      include = "theme-current.conf";
+      allow_remote_control = "socket-only";
+      listen_on = "unix:/tmp/kitty-socket";
       cursor_beam_thickness = "1";
       cursor_shape = "underline";
-      url_color = "#fa89c1";
       url_style = "curly";
       detect_urls = true;
       open_url_with = "default";
-      background_opacity = "0.95";
+      background_opacity = "0.90";
       window_padding_width = 8;
       hide_window_decorations = true;
       disable_ligatures = "never";
       tab_bar_style = "powerline";
       tab_bar_min_tabs = 2;
       tab_switch_strategy = "previous";
-      active_border_color = "#a6b7b7";
-      inactive_border_color = "#000000";
       enable_audio_bell = false;
       confirm_os_window_close = 1;
       scrollback_lines = 10000;

@@ -1,4 +1,5 @@
 singleton LauncherState LauncherState.qml
 LauncherService LauncherService.qml
 LauncherPanel LauncherPanel.qml
+LauncherWindow LauncherWindow.qml
 LauncherCatcher LauncherCatcher.qml

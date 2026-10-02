@@ -62,7 +62,6 @@ Scope {
         Quickshell.execDetached(["wallpaper-set", "--persist", item.path]);
         root.close();
     }
-    // R: aleatoriza tema + wallpaper (cierra al aplicar, como applySelected)
     function randomizeAll(): void {
         var fams = Theme.families;
         if (fams.length > 0) {
@@ -175,7 +174,6 @@ Scope {
         }
     }
 
-    // Alias: SUPER+C anterior (ThemeMenu) y SUPER+I anterior (WallpaperMenu)
     IpcHandler {
         target: "ThemeMenu"
 
@@ -311,7 +309,6 @@ Scope {
                         }
                     }
 
-                    // ---- Fila superior: Color Theme + Aleatorio + Dark Mode (theme.png) ----
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter
                         spacing: 28

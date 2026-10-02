@@ -8,10 +8,10 @@
       "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
 
       logo = {
-        source = "NixOS2";
-        type = "builtin";
+        source = ../../../assets/subaru.txt;
+        type = "file-raw";
         padding = {
-          top = 1;
+          top = 0;
           left = 2;
         };
       };

@@ -29,6 +29,15 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
+        LauncherModule.LauncherWindow {
+            required property var modelData
+            screen: modelData
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
         LauncherModule.LauncherCatcher {
             required property var modelData
             screen: modelData

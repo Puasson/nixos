@@ -20,7 +20,7 @@ PanelWindow {
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Bottom
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    WlrLayershell.namespace: "quickshell-dock-catcher"
+    WlrLayershell.namespace: "quickshell-launcher-catcher"
 
     MouseArea {
         anchors.fill: parent

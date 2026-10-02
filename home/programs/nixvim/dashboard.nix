@@ -1,107 +1,125 @@
-{ ... }:
-
+{ lib, ... }:
+let
+  subaruArt = lib.splitString "\n" (builtins.readFile ../../../assets/subaru-plain.txt);
+in
 {
-  programs.nixvim.plugins.dashboard = {
+  programs.nixvim.plugins.alpha = {
     enable = true;
     settings = {
-      theme = "hyper";
-      config = {
-        header = [
-          ""
-          "  ███████╗██╗   ██╗██████╗  █████╗ ██████╗ ██╗   ██╗"
-          "  ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔══██╗██║   ██║"
-          "  ███████╗██║   ██║██████╔╝███████║██████╔╝██║   ██║"
-          "  ╚════██║██║   ██║██╔══██╗██╔══██║██╔══██╗██║   ██║"
-          "  ███████║╚██████╔╝██████╔╝██║  ██║██║  ██║╚██████╔╝"
-          "  ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝"
-          ""
-        ];
-        week_header.enable = false;
-        shortcut = [
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Find File";
-            group = "DiagnosticHint";
-            action = "Telescope find_files";
-            key = "f";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "New File";
-            group = "DiagnosticHint";
-            action = "enew";
-            key = "n";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Projects";
-            group = "DiagnosticHint";
-            action = "Telescope find_files cwd=$HOME/nixos";
-            key = "p";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Find Text";
-            group = "DiagnosticHint";
-            action = "Telescope live_grep";
-            key = "g";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Recent Files";
-            group = "DiagnosticHint";
-            action = "Telescope oldfiles";
-            key = "r";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Config";
-            group = "DiagnosticHint";
-            action = "edit $HOME/nixos/home/programs/nixvim/nixvim.nix";
-            key = "c";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Restore Session";
-            group = "DiagnosticHint";
-            action = "lua require('persistence').load()";
-            key = "s";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Lazy Extras";
-            group = "DiagnosticHint";
-            action = "LazyGit";
-            key = "x";
-          }
-          {
-            icon = "󰒲 ";
-            icon_hl = "@variable";
-            desc = "Lazy";
-            group = "DiagnosticHint";
-            action = "checkhealth";
-            key = "l";
-          }
-          {
-            icon = " ";
-            icon_hl = "@variable";
-            desc = "Quit";
-            group = "DiagnosticHint";
-            action = "qa";
-            key = "q";
-          }
-        ];
-        footer.__raw = "{ '', '  Neovim v' .. tostring(vim.version()) .. ' ', }";
-        mru.limit = 0;
-        project.enable = false;
+      layout = [
+        {
+          type = "padding";
+          val = 2;
+        }
+        {
+          type = "text";
+          val = subaruArt;
+          opts = {
+            hl = "String";
+            position = "center";
+          };
+        }
+        {
+          type = "padding";
+          val = 1;
+        }
+        {
+          type = "text";
+          val = [ "S U B A R U" ];
+          opts = {
+            hl = "Title";
+            position = "center";
+          };
+        }
+        {
+          type = "padding";
+          val = 1;
+        }
+        {
+          type = "group";
+          val = [
+            {
+              type = "button";
+              val = "n  New file";
+              on_press.__raw = "function() vim.cmd('ene | startinsert') end";
+              opts = {
+                shortcut = "n";
+                hl = "Keyword";
+                position = "center";
+                cursor = 3;
+                width = 30;
+                align_shortcut = "left";
+              };
+            }
+            {
+              type = "button";
+              val = "f  Find file";
+              on_press.__raw = "function() require('telescope.builtin').find_files() end";
+              opts = {
+                shortcut = "f";
+                hl = "Keyword";
+                position = "center";
+                cursor = 3;
+                width = 30;
+                align_shortcut = "left";
+              };
+            }
+            {
+              type = "button";
+              val = "g  Grep text";
+              on_press.__raw = "function() require('telescope.builtin').live_grep() end";
+              opts = {
+                shortcut = "g";
+                hl = "Keyword";
+                position = "center";
+                cursor = 3;
+                width = 30;
+                align_shortcut = "left";
+              };
+            }
+            {
+              type = "button";
+              val = "s  Reload session";
+              on_press.__raw = "function() require('auto-session').restore_session() end";
+              opts = {
+                shortcut = "s";
+                hl = "Keyword";
+                position = "center";
+                cursor = 3;
+                width = 30;
+                align_shortcut = "left";
+              };
+            }
+            {
+              type = "button";
+              val = "r  Recent files";
+              on_press.__raw = "function() require('telescope.builtin').oldfiles() end";
+              opts = {
+                shortcut = "r";
+                hl = "Keyword";
+                position = "center";
+                cursor = 3;
+                width = 30;
+                align_shortcut = "left";
+              };
+            }
+          ];
+        }
+        {
+          type = "padding";
+          val = 1;
+        }
+        {
+          type = "text";
+          val = [ "python · js · ts · nix · lua · qml · html · css" ];
+          opts = {
+            hl = "Comment";
+            position = "center";
+          };
+        }
+      ];
+      opts = {
+        noautocmd = true;
       };
     };
   };

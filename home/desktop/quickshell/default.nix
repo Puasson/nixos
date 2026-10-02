@@ -1,6 +1,31 @@
 { pkgs, lib, ... }:
 
 let
+  palettes = import ./palettes.nix { inherit lib; };
+
+  paletteDataQml = pkgs.writeText "PaletteData.qml" palettes.qmlFile;
+
+  mkFamilyModeFiles =
+    ext: gen:
+    lib.concatMap (
+      fam:
+      map
+        (mode: {
+          name = "${fam}-${mode}.${ext}";
+          path = pkgs.writeText "${fam}-${mode}.${ext}" (gen fam mode);
+        })
+        [
+          "dark"
+          "light"
+        ]
+    ) palettes.families;
+
+  kittyThemesCustom = pkgs.linkFarm "kitty-themes-custom" (
+    mkFamilyModeFiles "conf" palettes.kittyFile
+  );
+
+  gtkCssCustom = pkgs.linkFarm "quickshell-gtk-css" (mkFamilyModeFiles "css" palettes.gtkCssFile);
+
   wallpaper-set = pkgs.writeShellApplication {
     name = "wallpaper-set";
     runtimeInputs = with pkgs; [
@@ -89,10 +114,17 @@ let
       dconf
       glib
       coreutils
+      kitty
     ];
     text = ''
       CACHE_DIR="$HOME/.cache/quickshell/theme"
+      FAMILY_FILE="$CACHE_DIR/family"
       MODE_FILE="$CACHE_DIR/mode"
+      DEFAULT_FAMILY="${builtins.head palettes.families}"
+      KITTY_THEMES="${kittyThemesCustom}"
+      GTK_CSS_DIR="${gtkCssCustom}"
+      KITTY_SOCKET="unix:/tmp/kitty-socket"
+      KITTY_CURRENT="$HOME/.config/kitty/theme-current.conf"
       NVIM_BG_FILE="$CACHE_DIR/nvim-background"
       NVIM_FLAVOUR_FILE="$CACHE_DIR/nvim-flavour"
       GTK3_INI="$HOME/.config/gtk-3.0/settings.ini"
@@ -105,11 +137,6 @@ let
 
       upsert_ini() {
         local file="$1" key="$2" value="$3"
-        # Los settings.ini los gestiona Home Manager como symlinks al store
-        # (solo lectura, siempre con los defaults oscuros). Para que el modo
-        # claro llegue a las apps GTK, se reemplaza el symlink por una copia
-        # regular en $HOME (el store queda intacto; en el proximo hms HM
-        # recrea el symlink y themeApplyCached lo vuelve a converger).
         if [ -L "$file" ]; then
           target="$(readlink -f "$file")" || return 0
           [ -f "$target" ] || return 0
@@ -168,21 +195,55 @@ let
         fi
       }
 
+      valid_family() {
+        local families="${lib.concatStringsSep " " palettes.families}"
+        case " $families " in
+          *" $1 "*) return 0 ;;
+          *) return 1 ;;
+        esac
+      }
+
+      apply_kitty() {
+        local src="$KITTY_THEMES/$1-$2.conf"
+        [ -f "$src" ] || return 0
+        mkdir -p "$HOME/.config/kitty" || true
+        cp -f "$src" "$KITTY_CURRENT" || true
+        kitty @ set-colors --all "$src" >/dev/null 2>&1 \
+          || kitty @ --to "$KITTY_SOCKET" set-colors --all "$src" >/dev/null 2>&1 \
+          || true
+      }
+
+      apply_gtk_css() {
+        local src="$GTK_CSS_DIR/$1-$2.css"
+        [ -f "$src" ] || return 0
+        for dest in "$HOME/.config/gtk-3.0/gtk.css" "$HOME/.config/gtk-4.0/gtk.css"; do
+          mkdir -p "$(dirname "$dest")" || true
+          cp -f "$src" "$dest" || true
+        done
+      }
+
       MODE=""
+      FAMILY=""
       if [ "''${1:-}" = "--cached" ]; then
         [ -f "$MODE_FILE" ] && MODE="$(cat "$MODE_FILE")" || MODE="dark"
+        [ -f "$FAMILY_FILE" ] && FAMILY="$(cat "$FAMILY_FILE")" || FAMILY="$DEFAULT_FAMILY"
       elif [ $# -eq 2 ]; then
+        FAMILY="$1"
         MODE="$2"
       elif [ $# -eq 1 ]; then
+        FAMILY="$(cat "$FAMILY_FILE" 2>/dev/null)"
         MODE="$1"
       else
         usage
       fi
 
       [ "$MODE" = "dark" ] || [ "$MODE" = "light" ] || usage
+      valid_family "$FAMILY" || FAMILY="$DEFAULT_FAMILY"
 
       apply_gtk "$MODE"
       apply_nvim "$MODE"
+      apply_kitty "$FAMILY" "$MODE"
+      apply_gtk_css "$FAMILY" "$MODE"
     '';
   };
 
@@ -197,7 +258,7 @@ let
       theme-apply
     ];
     text = ''
-      FAMILIES="abyss-blue forest-green violet-haze holst-red holst-amber mono sakura"
+      FAMILIES="${lib.concatStringsSep " " palettes.families}"
       CACHE_DIR="$HOME/.cache/quickshell/theme"
       FAMILY_FILE="$CACHE_DIR/family"
       MODE_FILE="$CACHE_DIR/mode"
@@ -207,7 +268,7 @@ let
         if [ -f "$FAMILY_FILE" ]; then
           cat "$FAMILY_FILE"
         else
-          printf 'abyss-blue'
+          printf '${builtins.head palettes.families}'
         fi
       }
 
@@ -335,5 +396,13 @@ in
         $DRY_RUN_CMD ${theme-apply}/bin/theme-apply --cached 2>/dev/null || true
       '';
 
-  home.file.".config/quickshell".source = ./config;
+  home.file.".config/quickshell" = {
+    source = ./config;
+    recursive = true;
+  };
+  home.file.".config/quickshell/theme/PaletteData.qml".source = paletteDataQml;
+
+  home.file.".config/kitty/themes-custom".source = kittyThemesCustom;
+
+  home.file.".local/share/quickshell-palette/gtk".source = gtkCssCustom;
 }

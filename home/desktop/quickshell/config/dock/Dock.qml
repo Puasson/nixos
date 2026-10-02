@@ -5,7 +5,7 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
-import "../launcher" as LauncherModule
+import "../launcher"
 
 PanelWindow {
     id: root
@@ -18,21 +18,19 @@ PanelWindow {
         bottom: 10
     }
 
-    readonly property int panelW: 470
-    readonly property int panelH: 480
     readonly property int compactH: 60
     readonly property int compactW: footerRow.implicitWidth + 24
 
-    implicitWidth: Math.max(root.panelW, root.compactW)
-    implicitHeight: root.panelH
+    implicitWidth: root.compactW
+    implicitHeight: root.compactH
 
     color: "transparent"
     visible: !reallyHidden
 
     exclusionMode: ExclusionMode.Ignore
     exclusiveZone: 0
-    focusable: root.expanded
-    WlrLayershell.keyboardFocus: root.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    focusable: false
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell-dock"
 
     mask: Region {
@@ -70,8 +68,7 @@ PanelWindow {
             return 0;
         }
     }
-    readonly property bool expanded: LauncherModule.LauncherState.isOpen
-    readonly property bool shouldShow: root.expanded || DockState.shouldShow(root.screenName, root.windowCount)
+    readonly property bool shouldShow: DockState.shouldShow(root.screenName, root.windowCount)
     property bool reallyHidden: true
     readonly property int hideDelay: 350
 
@@ -85,22 +82,6 @@ PanelWindow {
         }
     }
 
-    property int focusAttempts: 0
-    Timer {
-        id: focusTimer
-        interval: 120
-        repeat: false
-        onTriggered: {
-            if (!root.expanded)
-                return;
-            searchPanel.focusSearch();
-            if (!searchPanel.searchHasFocus && root.focusAttempts < 3) {
-                root.focusAttempts++;
-                focusTimer.restart();
-            }
-        }
-    }
-
     onShouldShowChanged: {
         if (root.shouldShow) {
             hideAnim.stop();
@@ -108,21 +89,6 @@ PanelWindow {
             root.reallyHidden = false;
         } else {
             hideTimer.restart();
-        }
-    }
-
-    onExpandedChanged: {
-        if (root.expanded) {
-            hideAnim.stop();
-            hideTimer.stop();
-            root.reallyHidden = false;
-            root.focusAttempts = 0;
-            focusTimer.restart();
-        } else if (!root.shouldShow) {
-            focusTimer.stop();
-            hideTimer.restart();
-        } else {
-            focusTimer.stop();
         }
     }
 
@@ -293,29 +259,11 @@ PanelWindow {
         id: dockBox
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        width: root.expanded ? Math.max(root.panelW, root.compactW) : root.compactW
-        height: root.expanded ? root.panelH : root.compactH
+        width: root.compactW
+        height: root.compactH
         radius: Theme.radiusLarge
         color: Theme.bgDock
         clip: true
-        focus: true
-        Keys.onPressed: event => {
-            if (!root.expanded)
-                return;
-            if (event.key === Qt.Key_Down) {
-                LauncherModule.LauncherState.selected = Math.min(LauncherModule.LauncherState.selected + 1, LauncherModule.LauncherState.visibleResults.length - 1);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Up) {
-                LauncherModule.LauncherState.selected = Math.max(LauncherModule.LauncherState.selected - 1, 0);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                LauncherModule.LauncherState.launch(LauncherModule.LauncherState.visibleResults[LauncherModule.LauncherState.selected]);
-                event.accepted = true;
-            } else if (event.key === Qt.Key_Escape) {
-                LauncherModule.LauncherState.close();
-                event.accepted = true;
-            }
-        }
 
         transform: Translate {
             id: boxSlide
@@ -331,39 +279,6 @@ PanelWindow {
             NumberAnimation {
                 duration: Theme.animIsland
                 easing.type: Theme.easeOut
-            }
-        }
-
-        Item {
-            id: searchZone
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.topMargin: 12
-            anchors.leftMargin: 14
-            anchors.rightMargin: 14
-            height: root.panelH - root.compactH - 24
-            opacity: root.expanded ? 1.0 : 0.0
-            scale: root.expanded ? 1.0 : 0.95
-            visible: opacity > 0.01
-            transformOrigin: Item.Top
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Theme.animFast
-                    easing.type: Theme.easeOut
-                }
-            }
-            Behavior on scale {
-                NumberAnimation {
-                    duration: Theme.animFast
-                    easing.type: Theme.easeOut
-                }
-            }
-
-            LauncherModule.LauncherPanel {
-                id: searchPanel
-                anchors.fill: parent
             }
         }
 
@@ -476,7 +391,7 @@ PanelWindow {
                         text: "apps"
                         font.family: "Material Symbols Rounded"
                         font.pixelSize: 24
-                        color: root.expanded ? Theme.accentBlue : Theme.textPrimary
+                        color: LauncherState.isOpen ? Theme.accentBlue : Theme.textPrimary
                     }
 
                     MouseArea {
@@ -485,7 +400,7 @@ PanelWindow {
                         acceptedButtons: Qt.LeftButton
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: LauncherModule.LauncherState.toggle()
+                        onClicked: LauncherState.toggle()
                     }
                 }
             }
