@@ -94,10 +94,4 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURC
 hl.bind("XF86Tools", hl.dsp.exec_cmd("uwsm app -- tauon"), { locked = true })
 
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("qs ipc call PowerMenu toggle"))
-hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd("qs ipc call Theme toggleMode"))
-
--- Wayscriber: un solo toggle global (duplicarlo lo anula). F6 entra a
--- light-passthrough dentro del overlay pero no siempre saca; usar el bind
--- global para salir cuando el overlay ya no recibe teclas.
-hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("uwsm app -- wayscriber --daemon-toggle"))
-hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd("wayscriber --light-toggle"))
+hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("qs ipc call Theme toggleMode"))

@@ -1,126 +1,125 @@
 { lib, ... }:
 let
-  subaruArt = lib.splitString "\n" (builtins.readFile ../../../assets/subaru-plain.txt);
+  subaruArt = lib.splitString "\n" (builtins.readFile ../../../assets/subaru-xvim.txt);
 in
 {
-  programs.nixvim.plugins.alpha = {
+  programs.nixvim.plugins.dashboard = {
     enable = true;
     settings = {
-      layout = [
-        {
-          type = "padding";
-          val = 2;
-        }
-        {
-          type = "text";
-          val = subaruArt;
-          opts = {
-            hl = "String";
-            position = "center";
-          };
-        }
-        {
-          type = "padding";
-          val = 1;
-        }
-        {
-          type = "text";
-          val = [ "S U B A R U" ];
-          opts = {
-            hl = "Title";
-            position = "center";
-          };
-        }
-        {
-          type = "padding";
-          val = 1;
-        }
-        {
-          type = "group";
-          val = [
-            {
-              type = "button";
-              val = "n  New file";
-              on_press.__raw = "function() vim.cmd('ene | startinsert') end";
-              opts = {
-                shortcut = "n";
-                hl = "Keyword";
-                position = "center";
-                cursor = 3;
-                width = 30;
-                align_shortcut = "left";
-              };
-            }
-            {
-              type = "button";
-              val = "f  Find file";
-              on_press.__raw = "function() require('telescope.builtin').find_files() end";
-              opts = {
-                shortcut = "f";
-                hl = "Keyword";
-                position = "center";
-                cursor = 3;
-                width = 30;
-                align_shortcut = "left";
-              };
-            }
-            {
-              type = "button";
-              val = "g  Grep text";
-              on_press.__raw = "function() require('telescope.builtin').live_grep() end";
-              opts = {
-                shortcut = "g";
-                hl = "Keyword";
-                position = "center";
-                cursor = 3;
-                width = 30;
-                align_shortcut = "left";
-              };
-            }
-            {
-              type = "button";
-              val = "s  Reload session";
-              on_press.__raw = "function() require('auto-session').restore_session() end";
-              opts = {
-                shortcut = "s";
-                hl = "Keyword";
-                position = "center";
-                cursor = 3;
-                width = 30;
-                align_shortcut = "left";
-              };
-            }
-            {
-              type = "button";
-              val = "r  Recent files";
-              on_press.__raw = "function() require('telescope.builtin').oldfiles() end";
-              opts = {
-                shortcut = "r";
-                hl = "Keyword";
-                position = "center";
-                cursor = 3;
-                width = 30;
-                align_shortcut = "left";
-              };
-            }
-          ];
-        }
-        {
-          type = "padding";
-          val = 1;
-        }
-        {
-          type = "text";
-          val = [ "python · js · ts · nix · lua · qml · html · css" ];
-          opts = {
-            hl = "Comment";
-            position = "center";
-          };
-        }
-      ];
-      opts = {
-        noautocmd = true;
+      theme = "doom";
+      config = {
+        header = subaruArt;
+        center = [
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Find file      ";
+            desc_hl = "Function";
+            key = "f";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "Telescope find_files";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "New file       ";
+            desc_hl = "Function";
+            key = "n";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "ene | startinsert";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Recent files   ";
+            desc_hl = "Function";
+            key = "r";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "Telescope oldfiles";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Find text      ";
+            desc_hl = "Function";
+            key = "g";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "Telescope live_grep";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Config         ";
+            desc_hl = "Function";
+            key = "c";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "e /home/sora/nixos/flake.nix";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Restore Session";
+            desc_hl = "Function";
+            key = "s";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "lua require('auto-session').RestoreSession()";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Explorer       ";
+            desc_hl = "Function";
+            key = "e";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "Neotree toggle";
+          }
+          {
+            icon = " ";
+            icon_hl = "Function";
+            desc = "Quit           ";
+            desc_hl = "Function";
+            key = "q";
+            key_hl = "Number";
+            key_format = " %s";
+            action = "qa";
+          }
+        ];
+        footer.__raw = ''
+          function()
+            local handle = io.popen("fortune -s 2>/dev/null")
+            local fortune = handle and handle:read("*a") or ""
+            if handle then handle:close() end
+            fortune = fortune:gsub("%s+$", "")
+            if fortune == "" then fortune = "Steady throttle, clean lines." end
+            local lines = { "", "⚡ SUBARU" }
+            for line in fortune:gmatch("[^\n]+") do
+              table.insert(lines, "  " .. line)
+            end
+            return lines
+          end
+        '';
       };
     };
   };
+
+  # Header azul + footer cian como en la imagen, re-aplicados tras cada colorscheme.
+  programs.nixvim.extraConfigLua = ''
+    local dash_hl = vim.api.nvim_create_augroup("SubaruDashboardHl", { clear = true })
+    vim.api.nvim_create_autocmd("ColorScheme", {
+      group = dash_hl,
+      callback = function()
+        vim.api.nvim_set_hl(0, "DashboardHeader", { link = "Function" })
+        vim.api.nvim_set_hl(0, "DashboardFooter", { link = "DiagnosticHint" })
+      end,
+    })
+    vim.api.nvim_set_hl(0, "DashboardHeader", { link = "Function" })
+    vim.api.nvim_set_hl(0, "DashboardFooter", { link = "DiagnosticHint" })
+  '';
 }

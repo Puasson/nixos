@@ -9,7 +9,6 @@
     ./programs/ssh/ssh.nix
     ./programs/mpv/mpv.nix
     ./programs/obs/obs.nix
-    ./programs/wayscriber/default.nix
     ./programs/python/python.nix
     ./desktop/hyprland/default.nix
     ./desktop/quickshell

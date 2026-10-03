@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ inputs, pkgs, ... }:
 {
   imports = [
     ./options.nix
@@ -20,6 +20,7 @@
   programs.nixvim = {
     enable = true;
     defaultEditor = true;
+    nixpkgs.source = inputs.nixpkgs;
 
     globals = {
       mapleader = " ";

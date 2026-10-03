@@ -1,7 +1,5 @@
 { ... }:
 {
-  # y nvim-flavour (mocha/latte). Catppuccin es el único colorscheme que
-  # usa exactamente esos flavours, con background auto.
   programs.nixvim = {
     colorschemes.catppuccin = {
       enable = true;
@@ -12,9 +10,13 @@
           dark = "mocha";
         };
         transparent_background = true;
+        float = {
+          transparent = true;
+          solid = false;
+        };
         term_colors = true;
         integrations = {
-          alpha = true;
+          dashboard = true;
           cmp = true;
           gitsigns = true;
           mini = true;

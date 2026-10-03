@@ -1,10 +1,6 @@
 { ... }:
 {
-  # Atajos estilo LazyVim (fuente: Context7 /websites/lazyvim).
-  # <leader> = space (default.nix). Grupos: f=find/file, b=buffer,
-  # c=code, x=diagnostics, q=quit/session, w=windows, <tab>=tabs.
   programs.nixvim.keymaps = [
-    # ── better up/down (wrapped lines) ──────────────────────────
     {
       mode = [
         "n"
@@ -432,7 +428,7 @@
     # ── file/find (Telescope, centralizado aquí) ────────────────
     {
       mode = "n";
-      key = "<leader>ff";
+      key = "<leader><leader>";
       action = "<cmd>Telescope find_files<CR>";
       options = {
         desc = "Find Files (Root)";
@@ -836,7 +832,7 @@
     {
       mode = "n";
       key = "<leader>qd";
-      action = "<cmd>Alpha<CR>";
+      action = "<cmd>Dashboard<CR>";
       options = {
         desc = "Dashboard";
         silent = true;

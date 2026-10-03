@@ -11,6 +11,7 @@
     enable = true;
     shellAliases = {
       "img" = "kitten icat";
+      "clean" = "rm ~/.config/gtk-3.0/settings.ini.backup && rm ~/.config/gtk-4.0/settings.ini.backup";
       ".." = "cd ..";
       nrs = "sudo nixos-rebuild switch --flake $HOME/nixos#nixos";
       nrt = "sudo nixos-rebuild test --flake $HOME/nixos#nixos";

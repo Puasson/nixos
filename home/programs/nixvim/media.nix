@@ -1,8 +1,5 @@
 { pkgs, ... }:
 {
-  # Visualizador de imágenes: image.nvim con backend kitty (tu kitty ya
-  # usa socket + remote control). snacks-nvim en este pin de nixvim aún
-  # no expone settings.image/dashboard, por eso se usa plugins.image.
   programs.nixvim.plugins = {
     image = {
       enable = true;

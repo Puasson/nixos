@@ -25,7 +25,7 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-launcher"
 
     property int cardW: 470
-    property int cardH: 420
+    property int cardH: 550
 
     property int focusAttempts: 0
     Timer {
